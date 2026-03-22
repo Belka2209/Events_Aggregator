@@ -70,15 +70,12 @@ async def _run_sync_with_new_session() -> None:
     _sync_status["is_running"] = True
     _sync_status["last_sync_error"] = None
 
-    # Создаем новую сессию для фоновой задачи
     async with async_session_maker() as session:
         try:
-            # Создаем репозитории
             event_repo = SQLAlchemyEventRepository(session)
             place_repo = SQLAlchemyPlaceRepository(session)
             sync_state_repo = SQLAlchemySyncStateRepository(session)
 
-            # Создаем клиент и usecase
             client = EventsProviderClient()
             usecase = SyncEventsUsecase(
                 client=client,
@@ -90,16 +87,16 @@ async def _run_sync_with_new_session() -> None:
             logger.info("Starting background sync...")
             stats = await usecase.execute()
 
+            # stats - это словарь, обращаемся как к словарю
             _sync_status["last_sync_stats"] = {
-                "events_synced": stats.events_synced,
-                "events_updated": stats.events_updated,
-                "events_skipped": stats.events_skipped,
-                "places_synced": stats.places_synced,
-                "sync_duration_seconds": stats.sync_duration_seconds,
+                "events_synced": stats.get("events_synced", 0),
+                "events_updated": stats.get("events_updated", 0),
+                "events_skipped": stats.get("events_skipped", 0),
+                "places_synced": stats.get("places_synced", 0),
+                "sync_duration_seconds": stats.get("sync_duration_seconds", 0),
             }
             logger.info(f"Background sync completed: {stats}")
 
-            # Коммитим изменения
             await session.commit()
 
         except Exception as e:
