@@ -55,7 +55,8 @@ class SyncEventsUsecase:
             logger.info(f"Incremental sync from {changed_at_str}")
         else:
             # First sync - get all events
-            changed_at_str = "2000-01-01"
+            # changed_at_str = "2000-01-01"
+            changed_at_str = None
             logger.info("Initial sync - getting all events")
 
         stats = {"created": 0, "updated": 0, "errors": 0}
