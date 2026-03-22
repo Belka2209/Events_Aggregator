@@ -36,9 +36,11 @@ class SyncEventsUsecase:
         self._place_repo = place_repo
         self._sync_state_repo = sync_state_repo
 
-    async def execute(self) -> dict:
+    async def execute(self, changed_at: str | None = None) -> dict:
         """Execute synchronization.
-
+        Args:
+        changed_at: Start date in YYYY-MM-DD format.
+                    Required for first sync, ignored for incremental sync.
         Returns:
             Dict with sync statistics.
         """
@@ -49,22 +51,39 @@ class SyncEventsUsecase:
         last_changed_at = last_sync.last_changed_at
         if not last_changed_at:
             raise ValueError("changed_at parameter is required")
-         # Определяем changed_at_str - если нет, то ошибка
+
+        # Определяем changed_at_str
         if last_sync and last_sync.last_changed_at:
-            # Инкрементальная синхронизация
+            # Инкрементальная синхронизация - используем дату из БД
             changed_at_str = last_sync.last_changed_at.strftime("%Y-%m-%d")
             last_changed_at = last_sync.last_changed_at
             logger.info(f"Incremental sync with changed_at={changed_at_str}")
         else:
-            # Нет даты для синхронизации - ошибка
-            error_msg = "No sync state found. Cannot determine changed_at parameter."
-            logger.error(error_msg)
-            await self._sync_state_repo.create(
-                last_changed_at=None,
-                sync_status="failed",
-                error_message=error_msg,
-            )
-            return {"created": 0, "updated": 0, "errors": 0, "error": error_msg}
+            # Первая синхронизация - проверяем, что передан changed_at
+            if not changed_at:
+                error_msg = "changed_at parameter is required for first sync"
+                logger.error(error_msg)
+                await self._sync_state_repo.create(
+                    last_changed_at=None,
+                    sync_status="failed",
+                    error_message=error_msg,
+                )
+                return {"created": 0, "updated": 0, "errors": 0, "error": error_msg}
+            # Проверяем формат даты
+            try:
+                datetime.strptime(changed_at, "%Y-%m-%d")
+            except ValueError:
+                error_msg = f"Invalid changed_at format: {changed_at}. Use YYYY-MM-DD"
+                logger.error(error_msg)
+                await self._sync_state_repo.create(
+                    last_changed_at=None,
+                    sync_status="failed",
+                    error_message=error_msg,
+                )
+                return {"created": 0, "updated": 0, "errors": 0, "error": error_msg}
+
+            changed_at_str = changed_at
+            logger.info(f"Initial sync with changed_at={changed_at_str}")
 
         stats = {"created": 0, "updated": 0, "errors": 0}
 

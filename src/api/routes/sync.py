@@ -1,9 +1,10 @@
 """Sync endpoints."""
 
 import asyncio
+from datetime import datetime
 import logging
 
-from fastapi import APIRouter, BackgroundTasks, Depends
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.core.database import async_session_maker, get_session
@@ -39,12 +40,26 @@ async def sync_status():
 @router.post("/sync/trigger", response_model=SyncTriggerResponse)
 async def trigger_sync(
     background_tasks: BackgroundTasks,
+    changed_at: str = Query(
+        ..., description="Start date for sync in YYYY-MM-DD format"
+    ),
 ) -> SyncTriggerResponse:
     """Trigger manual synchronization in background.
 
     Returns:
         Sync status and statistics.
+     Args:
+        changed_at: Start date for sync in YYYY-MM-DD format.
+                    Required for first sync.
     """
+    # Проверяем формат даты
+    try:
+        datetime.strptime(changed_at, "%Y-%m-%d")
+    except ValueError:
+        raise HTTPException(
+            status_code=400, detail="Invalid changed_at format. Use YYYY-MM-DD"
+        )
+
     # Проверяем, не запущена ли уже синхронизация
     if _sync_status["is_running"]:
         return SyncTriggerResponse(
@@ -56,7 +71,7 @@ async def trigger_sync(
     logger.info("Manual sync triggered")
 
     # Запускаем синхронизацию в фоне с новой сессией
-    background_tasks.add_task(_run_sync_with_new_session)
+    background_tasks.add_task(_run_sync_with_new_session, changed_at)
 
     return SyncTriggerResponse(
         status="started",
@@ -65,8 +80,11 @@ async def trigger_sync(
     )
 
 
-async def _run_sync_with_new_session() -> None:
-    """Run sync with a new database session."""
+async def _run_sync_with_new_session(changed_at: str) -> None:
+    """Run sync with a new database session.
+    Args:
+        changed_at: Start date for sync in YYYY-MM-DD format.
+    """
     _sync_status["is_running"] = True
     _sync_status["last_sync_error"] = None
 
@@ -85,7 +103,7 @@ async def _run_sync_with_new_session() -> None:
             )
 
             logger.info("Starting background sync...")
-            stats = await usecase.execute()
+            stats = await usecase.execute(changed_at=changed_at)
 
             # stats - это словарь, обращаемся как к словарю
             _sync_status["last_sync_stats"] = {
