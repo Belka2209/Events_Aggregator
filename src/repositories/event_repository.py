@@ -3,7 +3,7 @@
 from datetime import datetime
 from typing import Protocol
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -81,12 +81,10 @@ class SQLAlchemyEventRepository:
             query = query.where(Event.event_time >= date_from)
 
         # Get total count
-        count_query = select(Event)
+        count_query = select(func.count()).select_from(Event)
         if date_from:
             count_query = count_query.where(Event.event_time >= date_from)
-        count_result = await self._session.execute(
-            select(count_query.subquery().count())
-        )
+        count_result = await self._session.execute(count_query)
         total = count_result.scalar() or 0
 
         # Apply pagination
