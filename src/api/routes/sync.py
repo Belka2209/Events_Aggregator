@@ -6,7 +6,7 @@ import logging
 from fastapi import APIRouter, BackgroundTasks, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.core.database import get_session
+from src.core.database import async_session_maker, get_session
 from src.repositories.event_repository import SQLAlchemyEventRepository
 from src.repositories.place_repository import SQLAlchemyPlaceRepository
 from src.repositories.sync_state_repository import SQLAlchemySyncStateRepository
@@ -39,7 +39,6 @@ async def sync_status():
 @router.post("/sync/trigger", response_model=SyncTriggerResponse)
 async def trigger_sync(
     background_tasks: BackgroundTasks,
-    session: AsyncSession = Depends(get_session),
 ) -> SyncTriggerResponse:
     """Trigger manual synchronization in background.
 
@@ -56,25 +55,8 @@ async def trigger_sync(
 
     logger.info("Manual sync triggered")
 
-    # Создаем репозитории
-    event_repo = SQLAlchemyEventRepository(session)
-    place_repo = SQLAlchemyPlaceRepository(session)
-    sync_state_repo = SQLAlchemySyncStateRepository(session)
-
-    # Создаем клиент и usecase
-    client = EventsProviderClient()
-    usecase = SyncEventsUsecase(
-        client=client,
-        event_repo=event_repo,
-        place_repo=place_repo,
-        sync_state_repo=sync_state_repo,
-    )
-
-    # Запускаем синхронизацию в фоне
-    background_tasks.add_task(
-        _run_sync,
-        usecase,
-    )
+    # Запускаем синхронизацию в фоне с новой сессией
+    background_tasks.add_task(_run_sync_with_new_session)
 
     return SyncTriggerResponse(
         status="started",
@@ -83,18 +65,46 @@ async def trigger_sync(
     )
 
 
-async def _run_sync(usecase: SyncEventsUsecase) -> None:
-    """Run sync in background."""
+async def _run_sync_with_new_session() -> None:
+    """Run sync with a new database session."""
     _sync_status["is_running"] = True
     _sync_status["last_sync_error"] = None
 
-    try:
-        logger.info("Starting background sync...")
-        stats = await usecase.execute()
-        _sync_status["last_sync_stats"] = stats
-        logger.info(f"Background sync completed: {stats}")
-    except Exception as e:
-        _sync_status["last_sync_error"] = str(e)
-        logger.error(f"Background sync failed: {e}", exc_info=True)
-    finally:
-        _sync_status["is_running"] = False
+    # Создаем новую сессию для фоновой задачи
+    async with async_session_maker() as session:
+        try:
+            # Создаем репозитории
+            event_repo = SQLAlchemyEventRepository(session)
+            place_repo = SQLAlchemyPlaceRepository(session)
+            sync_state_repo = SQLAlchemySyncStateRepository(session)
+
+            # Создаем клиент и usecase
+            client = EventsProviderClient()
+            usecase = SyncEventsUsecase(
+                client=client,
+                event_repo=event_repo,
+                place_repo=place_repo,
+                sync_state_repo=sync_state_repo,
+            )
+
+            logger.info("Starting background sync...")
+            stats = await usecase.execute()
+
+            _sync_status["last_sync_stats"] = {
+                "events_synced": stats.events_synced,
+                "events_updated": stats.events_updated,
+                "events_skipped": stats.events_skipped,
+                "places_synced": stats.places_synced,
+                "sync_duration_seconds": stats.sync_duration_seconds,
+            }
+            logger.info(f"Background sync completed: {stats}")
+
+            # Коммитим изменения
+            await session.commit()
+
+        except Exception as e:
+            _sync_status["last_sync_error"] = str(e)
+            logger.error(f"Background sync failed: {e}", exc_info=True)
+            await session.rollback()
+        finally:
+            _sync_status["is_running"] = False
