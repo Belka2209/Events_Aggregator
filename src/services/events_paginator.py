@@ -25,20 +25,28 @@ class EventsPaginator:
     async def _paginate(self) -> AsyncIterator[EventData]:
         """Iterate through all pages of events."""
         cursor: str | None = None
+        page = 1
 
         while True:
+            print(f"Fetching page {page} with cursor={cursor}")
+
             events, next_cursor = await self._client.events(
                 changed_at=self._changed_at,
                 cursor=cursor,
             )
 
+            print(f"Got {len(events)} events, next_cursor={next_cursor}")
+
             for event in events:
                 yield event
 
             if next_cursor is None:
+                print("No more pages")
                 break
 
             cursor = self._extract_cursor(next_cursor)
+            page += 1
+            print(f"Next cursor extracted: {cursor}")
 
     def _extract_cursor(self, next_url: str) -> str | None:
         """Extract cursor from next URL.
