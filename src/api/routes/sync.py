@@ -1,13 +1,12 @@
 """Sync endpoints."""
 
-import asyncio
-from datetime import datetime
+# import asyncio
+# from datetime import datetime
 import logging
 
-from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query
-from sqlalchemy.ext.asyncio import AsyncSession
+from fastapi import APIRouter, BackgroundTasks
 
-from src.core.database import async_session_maker, get_session
+from src.core.database import async_session_maker
 from src.repositories.event_repository import SQLAlchemyEventRepository
 from src.repositories.place_repository import SQLAlchemyPlaceRepository
 from src.repositories.sync_state_repository import SQLAlchemySyncStateRepository
@@ -40,22 +39,8 @@ async def sync_status():
 @router.post("/sync/trigger", response_model=SyncTriggerResponse)
 async def trigger_sync(
     background_tasks: BackgroundTasks,
-    changed_at: str | None = Query(
-        None,
-        description="Date filter for sync in YYYY-MM-DD format. Required only for first sync.",
-    ),
 ) -> SyncTriggerResponse:
     """Trigger manual synchronization in background."""
-
-    # Проверяем формат даты, если она передана
-    if changed_at:
-        try:
-            datetime.strptime(changed_at, "%Y-%m-%d")
-        except ValueError:
-            raise HTTPException(
-                status_code=400, detail="Invalid changed_at format. Use YYYY-MM-DD"
-            )
-
     if _sync_status["is_running"]:
         return SyncTriggerResponse(
             status="already_running",
@@ -63,9 +48,9 @@ async def trigger_sync(
             stats=None,
         )
 
-    logger.info(f"Manual sync triggered with changed_at={changed_at}")
+    logger.info("Manual sync triggered")
 
-    background_tasks.add_task(_run_sync_with_new_session, changed_at)
+    background_tasks.add_task(_run_sync_with_new_session)
 
     return SyncTriggerResponse(
         status="started",
@@ -74,11 +59,8 @@ async def trigger_sync(
     )
 
 
-async def _run_sync_with_new_session(changed_at: str) -> None:
-    """Run sync with a new database session.
-    Args:
-        changed_at: Start date for sync in YYYY-MM-DD format.
-    """
+async def _run_sync_with_new_session() -> None:
+    """Run sync with a new database session."""
     _sync_status["is_running"] = True
     _sync_status["last_sync_error"] = None
 
@@ -97,15 +79,14 @@ async def _run_sync_with_new_session(changed_at: str) -> None:
             )
 
             logger.info("Starting background sync...")
-            stats = await usecase.execute(changed_at=changed_at)
+            stats = await usecase.execute()
 
-            # stats - это словарь, обращаемся как к словарю
             _sync_status["last_sync_stats"] = {
-                "events_synced": stats.get("events_synced", 0),
-                "events_updated": stats.get("events_updated", 0),
-                "events_skipped": stats.get("events_skipped", 0),
-                "places_synced": stats.get("places_synced", 0),
-                "sync_duration_seconds": stats.get("sync_duration_seconds", 0),
+                "events_synced": stats.get("created", 0),
+                "events_updated": stats.get("updated", 0),
+                "events_skipped": stats.get("errors", 0),
+                "places_synced": 0,
+                "sync_duration_seconds": 0,
             }
             logger.info(f"Background sync completed: {stats}")
 
