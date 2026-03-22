@@ -26,8 +26,14 @@ class Settings(BaseSettings):
 
     @property
     def database_url(self) -> str:
-        """Get database URL."""
-        return self.postgres_connection_string
+        # """Get database URL."""
+        # return self.postgres_connection_string
+        """Get database URL with asyncpg driver."""
+        url = self.postgres_connection_string
+        # Replace postgres:// with postgresql+asyncpg://
+        if url.startswith("postgres://"):
+            url = url.replace("postgres://", "postgresql+asyncpg://", 1)
+        return url
 
     # Events Provider API
     events_provider_base_url: str = "https://events-provider.dev-2.python-labs.ru"
