@@ -1,7 +1,7 @@
 """Sync events usecase."""
 
 import logging
-from datetime import datetime
+from datetime import datetime, timezone
 
 from src.models.event import Event, Place
 from src.repositories.event_repository import EventRepository
@@ -38,57 +38,38 @@ class SyncEventsUsecase:
 
     async def execute(self, changed_at: str | None = None) -> dict:
         """Execute synchronization.
+
         Args:
-        changed_at: Start date in YYYY-MM-DD format.
-                    Required for first sync, ignored for incremental sync.
-        Returns:
-            Dict with sync statistics.
+            changed_at: Date filter in YYYY-MM-DD format.
+                        Required for first sync, ignored if sync_state exists.
         """
         logger.info("Starting events synchronization")
 
         # Get last sync state
         last_sync = await self._sync_state_repo.get_latest()
-        last_changed_at = last_sync.last_changed_at
-        if not last_changed_at:
-            raise ValueError("changed_at parameter is required")
+        last_changed_at = None
 
-        # Определяем changed_at_str
+        # Определяем changed_at_str - он нужен для ВСЕХ запросов пагинации
         if last_sync and last_sync.last_changed_at:
-            # Инкрементальная синхронизация - используем дату из БД
+            # Используем дату из последней синхронизации
             changed_at_str = last_sync.last_changed_at.strftime("%Y-%m-%d")
             last_changed_at = last_sync.last_changed_at
-            logger.info(f"Incremental sync with changed_at={changed_at_str}")
+            logger.info(f"Using changed_at from last sync: {changed_at_str}")
         else:
-            # Первая синхронизация - проверяем, что передан changed_at
+            # Первая синхронизация - changed_at должен быть передан
             if not changed_at:
                 error_msg = "changed_at parameter is required for first sync"
                 logger.error(error_msg)
-                await self._sync_state_repo.create(
-                    last_changed_at=None,
-                    sync_status="failed",
-                    error_message=error_msg,
-                )
-                return {"created": 0, "updated": 0, "errors": 0, "error": error_msg}
-            # Проверяем формат даты
-            try:
-                datetime.strptime(changed_at, "%Y-%m-%d")
-            except ValueError:
-                error_msg = f"Invalid changed_at format: {changed_at}. Use YYYY-MM-DD"
-                logger.error(error_msg)
-                await self._sync_state_repo.create(
-                    last_changed_at=None,
-                    sync_status="failed",
-                    error_message=error_msg,
-                )
                 return {"created": 0, "updated": 0, "errors": 0, "error": error_msg}
 
             changed_at_str = changed_at
-            logger.info(f"Initial sync with changed_at={changed_at_str}")
+            logger.info(f"First sync with changed_at={changed_at_str}")
 
         stats = {"created": 0, "updated": 0, "errors": 0}
 
         try:
-            # Create paginator and iterate through all events
+            # Create paginator - он будет использовать ОДИН И ТОТ ЖЕ changed_at
+            # для всех запросов в цикле пагинации
             paginator = EventsPaginator(self._client, changed_at_str)
             max_changed_at: datetime | None = None
 
@@ -99,7 +80,7 @@ class SyncEventsUsecase:
                     if max_changed_at is None or event_changed_at > max_changed_at:
                         max_changed_at = event_changed_at
 
-                    # Upsert place first
+                    # Upsert place
                     place = Place(
                         id=event_data.place.id,
                         name=event_data.place.name,
@@ -157,11 +138,18 @@ class SyncEventsUsecase:
                     logger.error(f"Error processing event {event_data.id}: {e}")
                     stats["errors"] += 1
 
-            # Update sync state
-            await self._sync_state_repo.create(
-                last_changed_at=max_changed_at,
-                sync_status="success",
-            )
+            # Сохраняем максимальный changed_at для следующей синхронизации
+            if max_changed_at:
+                await self._sync_state_repo.create(
+                    last_changed_at=max_changed_at,
+                    sync_status="success",
+                )
+            else:
+                # Если не было событий, сохраняем текущую дату
+                await self._sync_state_repo.create(
+                    last_changed_at=last_changed_at or datetime.now(timezone.utc),
+                    sync_status="success",
+                )
 
             logger.info(
                 f"Sync completed: {stats['created']} created, "
@@ -169,7 +157,7 @@ class SyncEventsUsecase:
             )
 
         except Exception as e:
-            logger.error(f"Sync failed: {e}")
+            logger.error(f"Sync failed: {e}", exc_info=True)
             await self._sync_state_repo.create(
                 last_changed_at=last_changed_at,
                 sync_status="failed",

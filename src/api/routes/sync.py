@@ -40,27 +40,22 @@ async def sync_status():
 @router.post("/sync/trigger", response_model=SyncTriggerResponse)
 async def trigger_sync(
     background_tasks: BackgroundTasks,
-    changed_at: str = Query(
-        ..., description="Start date for sync in YYYY-MM-DD format"
+    changed_at: str | None = Query(
+        None,
+        description="Date filter for sync in YYYY-MM-DD format. Required only for first sync.",
     ),
 ) -> SyncTriggerResponse:
-    """Trigger manual synchronization in background.
+    """Trigger manual synchronization in background."""
 
-    Returns:
-        Sync status and statistics.
-     Args:
-        changed_at: Start date for sync in YYYY-MM-DD format.
-                    Required for first sync.
-    """
-    # Проверяем формат даты
-    try:
-        datetime.strptime(changed_at, "%Y-%m-%d")
-    except ValueError:
-        raise HTTPException(
-            status_code=400, detail="Invalid changed_at format. Use YYYY-MM-DD"
-        )
+    # Проверяем формат даты, если она передана
+    if changed_at:
+        try:
+            datetime.strptime(changed_at, "%Y-%m-%d")
+        except ValueError:
+            raise HTTPException(
+                status_code=400, detail="Invalid changed_at format. Use YYYY-MM-DD"
+            )
 
-    # Проверяем, не запущена ли уже синхронизация
     if _sync_status["is_running"]:
         return SyncTriggerResponse(
             status="already_running",
@@ -68,9 +63,8 @@ async def trigger_sync(
             stats=None,
         )
 
-    logger.info("Manual sync triggered")
+    logger.info(f"Manual sync triggered with changed_at={changed_at}")
 
-    # Запускаем синхронизацию в фоне с новой сессией
     background_tasks.add_task(_run_sync_with_new_session, changed_at)
 
     return SyncTriggerResponse(
