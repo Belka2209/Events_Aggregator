@@ -46,18 +46,20 @@ class SyncEventsUsecase:
 
         # Get last sync state
         last_sync = await self._sync_state_repo.get_latest()
-        last_changed_at = None
+        last_changed_at = last_sync.last_changed_at
+        changed_at_str = last_changed_at.strftime("%Y-%m-%d")
+        print("changed_at_str", changed_at_str)
 
-        if last_sync and last_sync.last_changed_at:
-            # Use last_changed_at from previous sync
-            last_changed_at = last_sync.last_changed_at
-            changed_at_str = last_changed_at.strftime("%Y-%m-%d")
-            logger.info(f"Incremental sync from {changed_at_str}")
-        else:
-            # First sync - get all events
-            # changed_at_str = "2000-01-01"
-            changed_at_str = None
-            logger.info("Initial sync - getting all events")
+        # if last_sync and last_sync.last_changed_at:
+        #     # Use last_changed_at from previous sync
+        #     last_changed_at = last_sync.last_changed_at
+        #     changed_at_str = last_changed_at.strftime("%Y-%m-%d")
+        #     logger.info(f"Incremental sync from {changed_at_str}")
+        # else:
+        #     # First sync - get all events
+        #     # changed_at_str = "2000-01-01"
+        #     changed_at_str = None
+        #     logger.info("Initial sync - getting all events")
 
         stats = {"created": 0, "updated": 0, "errors": 0}
 
