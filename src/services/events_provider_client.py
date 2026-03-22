@@ -92,10 +92,17 @@ class EventsProviderClient:
         if cursor:
             params["cursor"] = cursor
 
+        print(f"Requesting events: url={url}, params={params}")
         async with httpx.AsyncClient(timeout=self._timeout) as client:
             response = await client.get(url, params=params, headers=self._get_headers())
             response.raise_for_status()
             data = response.json()
+            print(f"Response status: {response.status_code}")
+
+            response.raise_for_status()
+            data = response.json()
+            print(f"Response has {len(data.get('results', []))} results")
+            print(f"Next URL: {data.get('next')}")
 
         events = []
         for event_data in data["results"]:
@@ -122,7 +129,7 @@ class EventsProviderClient:
                 status_changed_at=event_data.get("status_changed_at"),
             )
             events.append(event)
-
+        print(f"Returning {len(events)} events")
         return events, data.get("next")
 
     async def get_seats(self, event_id: str) -> SeatsData:
