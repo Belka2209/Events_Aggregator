@@ -37,8 +37,13 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     logger.info("Database tables created")
 
     # Start background sync service
-    _background_sync_service = BackgroundSyncService()
-    await _background_sync_service.start()
+    try:
+        _background_sync_service = BackgroundSyncService()
+        await _background_sync_service.start()
+        logger.info("Background sync service started successfully")
+    except Exception as e:
+        logger.error(f"Failed to start background sync service: {e}")
+        _background_sync_service = None
 
     yield
 

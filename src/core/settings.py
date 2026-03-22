@@ -30,7 +30,7 @@ class Settings(BaseSettings):
         return self.postgres_connection_string
 
     # Events Provider API
-    events_provider_base_url: str = "http://events-provider.dev-2.python-labs.ru"
+    events_provider_base_url: str = "https://events-provider.dev-2.python-labs.ru"
     events_provider_api_key: str = ""
 
     # Sync settings
