@@ -79,7 +79,7 @@ async def get_events(
             raise HTTPException(
                 status_code=400, detail="Invalid date_from format. Use YYYY-MM-DD"
             )
-
+    print("date_from_dt", date_from_dt)
     # Get repository
     repo = SQLAlchemyEventRepository(session)
 

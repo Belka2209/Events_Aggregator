@@ -47,19 +47,24 @@ class SyncEventsUsecase:
         # Get last sync state
         last_sync = await self._sync_state_repo.get_latest()
         last_changed_at = last_sync.last_changed_at
-        changed_at_str = last_changed_at.strftime("%Y-%m-%d")
-        print("changed_at_str", changed_at_str)
-
-        # if last_sync and last_sync.last_changed_at:
-        #     # Use last_changed_at from previous sync
-        #     last_changed_at = last_sync.last_changed_at
-        #     changed_at_str = last_changed_at.strftime("%Y-%m-%d")
-        #     logger.info(f"Incremental sync from {changed_at_str}")
-        # else:
-        #     # First sync - get all events
-        #     # changed_at_str = "2000-01-01"
-        #     changed_at_str = None
-        #     logger.info("Initial sync - getting all events")
+        if not last_changed_at:
+            raise ValueError("changed_at parameter is required")
+         # Определяем changed_at_str - если нет, то ошибка
+        if last_sync and last_sync.last_changed_at:
+            # Инкрементальная синхронизация
+            changed_at_str = last_sync.last_changed_at.strftime("%Y-%m-%d")
+            last_changed_at = last_sync.last_changed_at
+            logger.info(f"Incremental sync with changed_at={changed_at_str}")
+        else:
+            # Нет даты для синхронизации - ошибка
+            error_msg = "No sync state found. Cannot determine changed_at parameter."
+            logger.error(error_msg)
+            await self._sync_state_repo.create(
+                last_changed_at=None,
+                sync_status="failed",
+                error_message=error_msg,
+            )
+            return {"created": 0, "updated": 0, "errors": 0, "error": error_msg}
 
         stats = {"created": 0, "updated": 0, "errors": 0}
 
