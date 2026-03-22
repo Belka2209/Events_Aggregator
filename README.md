@@ -53,7 +53,15 @@ cp .env.example .env
 4. Отредактируйте `.env` и укажите ваши настройки:
 
 ```env
-DATABASE_URL=postgresql+asyncpg://postgres:password@localhost:5432/events_aggregator
+# PostgreSQL settings
+POSTGRES_CONNECTION_STRING=postgresql+asyncpg://postgres:password@localhost:5432/events_aggregator
+POSTGRES_DATABASE_NAME=events_aggregator
+POSTGRES_HOST=localhost
+POSTGRES_PORT=5432
+POSTGRES_USERNAME=postgres
+POSTGRES_PASSWORD=password
+
+# Events Provider API
 EVENTS_PROVIDER_API_KEY=your-api-key-here
 ```
 

@@ -16,8 +16,18 @@ class Settings(BaseSettings):
     app_name: str = "Events Aggregator"
     debug: bool = False
 
-    # Database
-    database_url: str = "postgresql+asyncpg://localhost/events_aggregator"
+    # PostgreSQL settings
+    postgres_connection_string: str = "postgresql+asyncpg://localhost/events_aggregator"
+    postgres_database_name: str = "events_aggregator"
+    postgres_host: str = "localhost"
+    postgres_port: int = 5432
+    postgres_username: str = "postgres"
+    postgres_password: str = ""
+
+    @property
+    def database_url(self) -> str:
+        """Get database URL."""
+        return self.postgres_connection_string
 
     # Events Provider API
     events_provider_base_url: str = "http://events-provider.dev-2.python-labs.ru"
