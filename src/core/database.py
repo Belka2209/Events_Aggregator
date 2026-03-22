@@ -5,6 +5,8 @@ from sqlalchemy.orm import DeclarativeBase
 
 from src.core.settings import settings
 
+print(f"Database URL: {settings.database_url}")  # Временное логирование
+
 
 class Base(DeclarativeBase):
     """Base class for all models."""
