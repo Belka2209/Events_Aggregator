@@ -36,7 +36,7 @@ class Settings(BaseSettings):
         return url
 
     # Events Provider API
-    events_provider_base_url: str = "http://events-provider.dev-2.python-labs.ru"
+    events_provider_base_url: str = "http://student-system-events-provider-web.student-system-events-provider.svc:8000"
     events_provider_api_key: str = ""
 
     # Sync settings
