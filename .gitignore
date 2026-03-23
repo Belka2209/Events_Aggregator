@@ -133,3 +133,4 @@ Thumbs.db
 # Project specific
 *.log
 .pytest_cache/
+Tasks__
