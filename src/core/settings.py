@@ -26,8 +26,6 @@ class Settings(BaseSettings):
 
     @property
     def database_url(self) -> str:
-        # """Get database URL."""
-        # return self.postgres_connection_string
         """Get database URL with asyncpg driver."""
         url = self.postgres_connection_string
         # Replace postgres:// with postgresql+asyncpg://
