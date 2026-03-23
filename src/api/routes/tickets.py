@@ -30,15 +30,17 @@ async def create_ticket(
     """Register for an event.
 
     Args:
-        request: Ticket creation request.
+        request: Ticket creation request data with event_id.
         session: Database session.
 
     Returns:
         Created ticket information.
     """
+    event_id = request.event_id
+    
     # Get event from local DB
     event_repo = SQLAlchemyEventRepository(session)
-    event = await event_repo.get(request.event_id)
+    event = await event_repo.get(event_id)
 
     if not event:
         raise HTTPException(status_code=404, detail="Event not found")
@@ -62,7 +64,7 @@ async def create_ticket(
     client = EventsProviderClient()
     try:
         registration = await client.register(
-            event_id=request.event_id,
+            event_id=event_id,
             first_name=request.first_name,
             last_name=request.last_name,
             email=request.email,
@@ -77,7 +79,7 @@ async def create_ticket(
     ticket_repo = SQLAlchemyTicketRepository(session)
     ticket = Ticket(
         ticket_id=registration.ticket_id,
-        event_id=request.event_id,
+        event_id=event_id,
         first_name=request.first_name,
         last_name=request.last_name,
         email=request.email,
@@ -87,7 +89,7 @@ async def create_ticket(
     await ticket_repo.create(ticket)
 
     logger.info(
-        f"Ticket created: {registration.ticket_id} for event {request.event_id}"
+        f"Ticket created: {registration.ticket_id} for event {event_id}"
     )
 
     return TicketCreateResponse(ticket_id=registration.ticket_id)
@@ -101,7 +103,7 @@ async def delete_ticket(
     """Cancel registration for an event.
 
     Args:
-        ticket_id: Ticket UUID.
+        ticket_id: Ticket UUID from path.
         session: Database session.
 
     Returns:
