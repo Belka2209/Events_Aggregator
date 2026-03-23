@@ -82,6 +82,8 @@ class SyncEventsUsecase:
                         ),
                     )
                     await self._place_repo.upsert(place)
+                    # Commit place so event can reference it
+                    await self._place_repo._session.commit()
 
                     # Upsert event
                     event = Event(
@@ -116,6 +118,9 @@ class SyncEventsUsecase:
                     else:
                         await self._event_repo.upsert(event)
                         stats["created"] += 1
+                    
+                    # Commit each event
+                    await self._event_repo._session.commit()
 
                 except Exception as e:
                     logger.error(f"Error processing event {event_data.id}: {e}")
@@ -129,6 +134,7 @@ class SyncEventsUsecase:
                     last_changed_at=max_changed_at,
                     sync_status="success",
                 )
+                await self._sync_state_repo._session.commit()
                 logger.info(f"Saved sync state with last_changed_at={max_changed_at}")
             else:
                 # Если не было событий, сохраняем текущую дату
@@ -138,6 +144,7 @@ class SyncEventsUsecase:
                     sync_status="success",
                     error_message="No events found",
                 )
+                await self._sync_state_repo._session.commit()
                 logger.info(f"No events found, saved current date={current_date}")
 
             logger.info(
@@ -152,6 +159,7 @@ class SyncEventsUsecase:
                 sync_status="failed",
                 error_message=str(e),
             )
+            await self._sync_state_repo._session.commit()
             stats["error"] = str(e)
 
         return stats

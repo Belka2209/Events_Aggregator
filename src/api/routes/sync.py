@@ -90,11 +90,8 @@ async def _run_sync_with_new_session() -> None:
             }
             logger.info(f"Background sync completed: {stats}")
 
-            await session.commit()
-
         except Exception as e:
             _sync_status["last_sync_error"] = str(e)
             logger.error(f"Background sync failed: {e}", exc_info=True)
-            await session.rollback()
         finally:
             _sync_status["is_running"] = False
