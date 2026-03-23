@@ -46,7 +46,7 @@ def build_previous_url(
     return f"{base_url}{params}"
 
 
-@router.get("/events/", response_model=EventsListResponse)
+@router.get("/events", response_model=EventsListResponse)
 async def get_events(
     request: Request,
     session: Annotated[AsyncSession, Depends(get_session)],
@@ -125,7 +125,7 @@ async def get_events(
     )
 
 
-@router.get("/events/{event_id}/", response_model=EventDetailResponse)
+@router.get("/events/{event_id}", response_model=EventDetailResponse)
 async def get_event(
     session: Annotated[AsyncSession, Depends(get_session)],
     event_id: str,

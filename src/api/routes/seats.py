@@ -20,7 +20,7 @@ _seats_cache: dict[str, tuple[list[str], datetime]] = {}
 _CACHE_TTL_SECONDS = 30
 
 
-@router.get("/events/{event_id}/seats/", response_model=SeatsResponse)
+@router.get("/events/{event_id}/seats", response_model=SeatsResponse)
 async def get_seats(
     session: Annotated[AsyncSession, Depends(get_session)],
     event_id: str,
