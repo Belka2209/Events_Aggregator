@@ -1,7 +1,5 @@
 """Sync endpoints."""
 
-# import asyncio
-# from datetime import datetime
 import logging
 
 from fastapi import APIRouter, BackgroundTasks
@@ -78,7 +76,7 @@ async def _run_sync_with_new_session() -> None:
                 sync_state_repo=sync_state_repo,
             )
 
-            logger.info("Starting background sync...")
+            logger.info("Starting background sync")
             stats = await usecase.execute()
 
             _sync_status["last_sync_stats"] = {
@@ -88,10 +86,10 @@ async def _run_sync_with_new_session() -> None:
                 "places_synced": 0,
                 "sync_duration_seconds": 0,
             }
-            logger.info(f"Background sync completed: {stats}")
+            logger.info("Background sync completed: %s", stats)
 
         except Exception as e:
             _sync_status["last_sync_error"] = str(e)
-            logger.error(f"Background sync failed: {e}", exc_info=True)
+            logger.error("Background sync failed: %s", e, exc_info=True)
         finally:
             _sync_status["is_running"] = False

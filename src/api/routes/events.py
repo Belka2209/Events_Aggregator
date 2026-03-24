@@ -1,6 +1,5 @@
 """Events endpoints."""
 
-import logging
 from datetime import datetime, timezone
 from typing import Annotated
 
@@ -19,7 +18,6 @@ from src.schemas.api_schemas import (
 )
 
 router = APIRouter()
-logger = logging.getLogger(__name__)
 
 
 def build_next_url(
@@ -79,7 +77,6 @@ async def get_events(
             raise HTTPException(
                 status_code=400, detail="Invalid date_from format. Use YYYY-MM-DD"
             )
-    print("date_from_dt", date_from_dt)
     # Get repository
     repo = SQLAlchemyEventRepository(session)
 

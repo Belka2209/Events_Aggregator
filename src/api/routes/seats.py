@@ -39,7 +39,7 @@ async def get_seats(
     if event_id in _seats_cache:
         cached_seats, cached_at = _seats_cache[event_id]
         if now - cached_at < timedelta(seconds=_CACHE_TTL_SECONDS):
-            logger.debug(f"Returning cached seats for event {event_id}")
+            logger.debug("Returning cached seats for event %s", event_id)
             return SeatsResponse(event_id=event_id, available_seats=cached_seats)
 
     # Verify event exists in local DB
@@ -54,7 +54,7 @@ async def get_seats(
     try:
         seats_data = await client.get_seats(event_id)
     except Exception as e:
-        logger.error(f"Error getting seats for event {event_id}: {e}")
+        logger.error("Error getting seats for event %s: %d", event_id, e)
         raise HTTPException(status_code=500, detail="Failed to get seats from provider")
 
     # Update cache
