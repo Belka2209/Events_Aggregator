@@ -199,8 +199,8 @@ class EventsProviderClient:
         payload = {"ticket_id": ticket_id}
 
         async with httpx.AsyncClient(timeout=self._timeout) as client:
-            response = await client.post(
-                url, json=payload, headers=self._get_headers()
+            response = await client.delete(
+                url, params=payload, headers=self._get_headers()
             )
             response.raise_for_status()
             data = response.json()
