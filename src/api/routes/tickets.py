@@ -73,6 +73,8 @@ async def create_ticket(
     except HTTPException as e:
         if e.status_code == 400:
             raise HTTPException(status_code=400, detail="Seat is not available")
+        if e.status_code == 404:
+            raise HTTPException(status_code=400, detail="Event not found in provider")
         raise
 
     # Save ticket to local DB
@@ -120,8 +122,11 @@ async def delete_ticket(
     client = EventsProviderClient()
     try:
         await client.unregister(event_id=ticket.event_id, ticket_id=ticket_id)
+    except HTTPException as e:
+        logger.error(f"Provider error unregistering ticket {ticket_id}: {e.detail}")
+        raise
     except Exception as e:
-        logger.error(f"Error unregistering ticket {ticket_id}: {e}")
+        logger.error(f"System error unregistering ticket {ticket_id}: {e}")
         raise HTTPException(
             status_code=500, detail="Failed to unregister from provider"
         )

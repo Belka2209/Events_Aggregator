@@ -215,7 +215,7 @@ class TestEventsProviderClient:
         mock_response.raise_for_status.return_value = None
 
         mock_client = MagicMock()
-        mock_client.delete = AsyncMock(return_value=mock_response)
+        mock_client.request = AsyncMock(return_value=mock_response)
 
         context_manager = AsyncContextManagerMock(mock_client)
 
@@ -227,5 +227,10 @@ class TestEventsProviderClient:
                 event_id="event-uuid-1", ticket_id="ticket-uuid-123"
             )
 
-        mock_client.delete.assert_called_once()
+        mock_client.request.assert_called_once_with(
+            "DELETE",
+            f"{client._base_url}/api/events/event-uuid-1/unregister/",
+            json={"ticket_id": "ticket-uuid-123"},
+            headers=client._get_headers()
+        )
         assert result.success is True

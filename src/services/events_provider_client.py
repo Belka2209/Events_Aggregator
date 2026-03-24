@@ -3,6 +3,7 @@
 from dataclasses import dataclass
 
 import httpx
+from fastapi import HTTPException
 
 from src.core.settings import settings
 
@@ -199,10 +200,20 @@ class EventsProviderClient:
         payload = {"ticket_id": ticket_id}
 
         async with httpx.AsyncClient(timeout=self._timeout) as client:
-            response = await client.delete(
-                url, params=payload, headers=self._get_headers()
+            response = await client.request(
+                "DELETE",
+                url,
+                json=payload,
+                headers=self._get_headers()
             )
-            response.raise_for_status()
+            if response.is_error:
+                detail = response.text
+                try:
+                    detail = response.json().get("detail", detail)
+                except Exception:
+                    pass
+                raise HTTPException(status_code=response.status_code, detail=detail)
+            
             data = response.json()
 
         return UnregisterData(success=data["success"])
