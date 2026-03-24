@@ -45,7 +45,7 @@ class BackgroundSyncService:
             try:
                 await self._sync()
             except Exception as e:
-                logger.error(f"Sync error: {e}", exc_info=True)
+                logger.error("Sync error: %s", e, exc_info=True)
 
             # Wait for the next sync interval
             try:
@@ -77,4 +77,4 @@ class BackgroundSyncService:
 
             # Execute sync
             stats = await usecase.execute()
-            logger.info(f"Scheduled sync completed: {stats}")
+            logger.info("Scheduled sync completed: %s", stats)
