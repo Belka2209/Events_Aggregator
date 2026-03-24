@@ -37,7 +37,7 @@ async def create_ticket(
         Created ticket information.
     """
     event_id = request.event_id
-    
+
     # Get event from local DB
     event_repo = SQLAlchemyEventRepository(session)
     event = await event_repo.get(event_id)
@@ -90,9 +90,7 @@ async def create_ticket(
     )
     await ticket_repo.create(ticket)
 
-    logger.info(
-        f"Ticket created: {registration.ticket_id} for event {event_id}"
-    )
+    logger.info(f"Ticket created: {registration.ticket_id} for event {event_id}")
 
     return TicketCreateResponse(ticket_id=registration.ticket_id)
 

@@ -35,7 +35,7 @@ class SyncEventsUsecase:
 
         # Get last sync state
         last_sync = await self._sync_state_repo.get_latest()
-        
+
         # Определяем changed_at для запроса к API
         if last_sync and last_sync.last_changed_at:
             # Инкрементальная синхронизация - используем дату из БД
@@ -56,7 +56,7 @@ class SyncEventsUsecase:
 
             async for event_data in paginator:
                 event_count += 1
-                
+
                 try:
                     # Парсим changed_at для отслеживания максимума
                     event_changed_at = datetime.fromisoformat(event_data.changed_at)
@@ -118,7 +118,7 @@ class SyncEventsUsecase:
                     else:
                         await self._event_repo.upsert(event)
                         stats["created"] += 1
-                    
+
                     # Commit each event
                     await self._event_repo._session.commit()
 

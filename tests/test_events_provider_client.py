@@ -231,6 +231,6 @@ class TestEventsProviderClient:
             "DELETE",
             f"{client._base_url}/api/events/event-uuid-1/unregister/",
             json={"ticket_id": "ticket-uuid-123"},
-            headers=client._get_headers()
+            headers=client._get_headers(),
         )
         assert result.success is True

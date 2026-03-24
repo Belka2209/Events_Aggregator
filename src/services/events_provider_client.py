@@ -201,10 +201,7 @@ class EventsProviderClient:
 
         async with httpx.AsyncClient(timeout=self._timeout) as client:
             response = await client.request(
-                "DELETE",
-                url,
-                json=payload,
-                headers=self._get_headers()
+                "DELETE", url, json=payload, headers=self._get_headers()
             )
             if response.is_error:
                 detail = response.text
@@ -213,7 +210,7 @@ class EventsProviderClient:
                 except Exception:
                     pass
                 raise HTTPException(status_code=response.status_code, detail=detail)
-            
+
             data = response.json()
 
         return UnregisterData(success=data["success"])
