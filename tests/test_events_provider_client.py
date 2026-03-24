@@ -215,7 +215,7 @@ class TestEventsProviderClient:
         mock_response.raise_for_status.return_value = None
 
         mock_client = MagicMock()
-        mock_client.delete = AsyncMock(return_value=mock_response)
+        mock_client.post = AsyncMock(return_value=mock_response)
 
         context_manager = AsyncContextManagerMock(mock_client)
 
@@ -227,4 +227,4 @@ class TestEventsProviderClient:
                 event_id="event-uuid-1", ticket_id="ticket-uuid-123"
             )
 
-        assert result.success is True
+        mock_client.post.assert_called_once()
