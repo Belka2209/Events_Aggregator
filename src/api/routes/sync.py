@@ -1,5 +1,7 @@
 """Sync endpoints."""
 
+# import asyncio
+# from datetime import datetime
 import logging
 
 from fastapi import APIRouter, BackgroundTasks
