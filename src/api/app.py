@@ -43,7 +43,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
         await _background_sync_service.start()
         logger.info("Background sync service started successfully")
     except Exception as e:
-        logger.error(f"Failed to start background sync service: {e}")
+        logger.error("Failed to start background sync service: %s", e)
         _background_sync_service = None
 
     yield
@@ -79,7 +79,7 @@ async def validation_exception_handler(
 @app.exception_handler(Exception)
 async def global_exception_handler(request: Request, exc: Exception) -> JSONResponse:
     """Global exception handler."""
-    logger.error(f"Unhandled exception: {exc}", exc_info=True)
+    logger.error("Unhandled exception: %s", exc, exc_info=True)
     return JSONResponse(
         status_code=500,
         content={"detail": "Internal server error"},

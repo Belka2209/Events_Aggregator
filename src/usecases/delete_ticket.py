@@ -40,7 +40,7 @@ class DeleteTicketUsecase:
         try:
             await self._client.unregister(event_id=ticket.event_id, ticket_id=ticket_id)
         except ProviderError as e:
-            logger.error(f"Provider error unregistering ticket {ticket_id}: {e.detail}")
+            logger.error("Provider error unregistering ticket %s: %s", ticket_id, e.detail)
             raise HTTPException(
                 status_code=500, detail="Failed to unregister from provider"
             )
@@ -49,4 +49,4 @@ class DeleteTicketUsecase:
         await self._ticket_repo.delete(ticket)
         # await self._ticket_repo.commit()
 
-        logger.info(f"Ticket deleted: {ticket_id}")
+        logger.info("Ticket deleted: %s", ticket_id)
