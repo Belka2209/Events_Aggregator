@@ -20,7 +20,18 @@ async def test_paginator_single_page(mock_provider_client):
     """Test paginator with a single page of results."""
     # Arrange
     mock_events = [
-        EventData(id=f"evt_{i}", name=f"Event {i}", place=None, event_time="", registration_deadline=None, status="", number_of_visitors=0, changed_at="2023-01-01T12:00:00Z", created_at="", status_changed_at="")
+        EventData(
+            id=f"evt_{i}",
+            name=f"Event {i}",
+            place=None,
+            event_time="",
+            registration_deadline=None,
+            status="",
+            number_of_visitors=0,
+            changed_at="2023-01-01T12:00:00Z",
+            created_at="",
+            status_changed_at="",
+        )
         for i in range(5)
     ]
     mock_provider_client.events.return_value = (mock_events, None)  # No next cursor
@@ -32,15 +43,43 @@ async def test_paginator_single_page(mock_provider_client):
     # Assert
     assert len(results) == 5
     assert results[0].id == "evt_0"
-    mock_provider_client.events.assert_awaited_once_with(changed_at="2023-01-01", cursor=None)
+    mock_provider_client.events.assert_awaited_once_with(
+        changed_at="2023-01-01", cursor=None
+    )
 
 
 @pytest.mark.asyncio
 async def test_paginator_multiple_pages(mock_provider_client):
     """Test paginator with multiple pages."""
     # Arrange
-    page1_events = [EventData(id="evt_1", name="Event 1", place=None, event_time="", registration_deadline=None, status="", number_of_visitors=0, changed_at="2023-01-01T12:00:00Z", created_at="", status_changed_at="")]
-    page2_events = [EventData(id="evt_2", name="Event 2", place=None, event_time="", registration_deadline=None, status="", number_of_visitors=0, changed_at="2023-01-01T13:00:00Z", created_at="", status_changed_at="")]
+    page1_events = [
+        EventData(
+            id="evt_1",
+            name="Event 1",
+            place=None,
+            event_time="",
+            registration_deadline=None,
+            status="",
+            number_of_visitors=0,
+            changed_at="2023-01-01T12:00:00Z",
+            created_at="",
+            status_changed_at="",
+        )
+    ]
+    page2_events = [
+        EventData(
+            id="evt_2",
+            name="Event 2",
+            place=None,
+            event_time="",
+            registration_deadline=None,
+            status="",
+            number_of_visitors=0,
+            changed_at="2023-01-01T13:00:00Z",
+            created_at="",
+            status_changed_at="",
+        )
+    ]
 
     mock_provider_client.events.side_effect = [
         (page1_events, "http://test.com/api?cursor=p2"),
@@ -79,7 +118,20 @@ async def test_paginator_empty_response(mock_provider_client):
 async def test_paginator_stops_on_is_last(mock_provider_client):
     """Test paginator stops when a page is returned with no next cursor, even if it has events."""
     # Arrange
-    page1_events = [EventData(id="evt_1", name="Event 1", place=None, event_time="", registration_deadline=None, status="", number_of_visitors=0, changed_at="2023-01-01T12:00:00Z", created_at="", status_changed_at="")]
+    page1_events = [
+        EventData(
+            id="evt_1",
+            name="Event 1",
+            place=None,
+            event_time="",
+            registration_deadline=None,
+            status="",
+            number_of_visitors=0,
+            changed_at="2023-01-01T12:00:00Z",
+            created_at="",
+            status_changed_at="",
+        )
+    ]
     mock_provider_client.events.return_value = (page1_events, None)
     paginator = EventsPaginator(mock_provider_client, "2023-01-01")
 
@@ -89,4 +141,3 @@ async def test_paginator_stops_on_is_last(mock_provider_client):
     # Assert
     assert len(results) == 1
     assert mock_provider_client.events.call_count == 1
-

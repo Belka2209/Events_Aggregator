@@ -63,7 +63,10 @@ class CreateTicketUsecase:
             )
 
         # Validate registration deadline
-        if event.registration_deadline and datetime.now(timezone.utc) > event.registration_deadline:
+        if (
+            event.registration_deadline
+            and datetime.now(timezone.utc) > event.registration_deadline
+        ):
             raise HTTPException(
                 status_code=400, detail="Registration deadline has passed"
             )
@@ -81,7 +84,9 @@ class CreateTicketUsecase:
             if e.status_code == 400:
                 raise HTTPException(status_code=400, detail="Seat is not available")
             if e.status_code == 404:
-                raise HTTPException(status_code=404, detail="Event not found in provider")
+                raise HTTPException(
+                    status_code=404, detail="Event not found in provider"
+                )
             logger.error("Provider error during registration: %s", e.detail)
             raise HTTPException(status_code=500, detail="Provider error")
 
