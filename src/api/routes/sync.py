@@ -2,9 +2,10 @@
 
 import logging
 
-from fastapi import APIRouter, BackgroundTasks
+from fastapi import APIRouter, BackgroundTasks, Depends
 
 from src.core.database import async_session_maker
+from src.core.dependencies import get_events_provider_client
 from src.repositories.event_repository import SQLAlchemyEventRepository
 from src.repositories.place_repository import SQLAlchemyPlaceRepository
 from src.repositories.sync_state_repository import SQLAlchemySyncStateRepository
@@ -37,6 +38,7 @@ async def sync_status():
 @router.post("/sync/trigger", response_model=SyncTriggerResponse)
 async def trigger_sync(
     background_tasks: BackgroundTasks,
+    client: EventsProviderClient = Depends(get_events_provider_client),
 ) -> SyncTriggerResponse:
     """Trigger manual synchronization in background."""
     if _sync_status["is_running"]:
@@ -48,7 +50,7 @@ async def trigger_sync(
 
     logger.info("Manual sync triggered")
 
-    background_tasks.add_task(_run_sync_with_new_session)
+    background_tasks.add_task(_run_sync_with_new_session, client)
 
     return SyncTriggerResponse(
         status="started",
@@ -57,7 +59,7 @@ async def trigger_sync(
     )
 
 
-async def _run_sync_with_new_session() -> None:
+async def _run_sync_with_new_session(client: EventsProviderClient) -> None:
     """Run sync with a new database session."""
     _sync_status["is_running"] = True
     _sync_status["last_sync_error"] = None
@@ -68,7 +70,6 @@ async def _run_sync_with_new_session() -> None:
             place_repo = SQLAlchemyPlaceRepository(session)
             sync_state_repo = SQLAlchemySyncStateRepository(session)
 
-            client = EventsProviderClient()
             usecase = SyncEventsUsecase(
                 client=client,
                 event_repo=event_repo,
@@ -78,6 +79,8 @@ async def _run_sync_with_new_session() -> None:
 
             logger.info("Starting background sync")
             stats = await usecase.execute()
+
+            await session.commit()
 
             _sync_status["last_sync_stats"] = {
                 "events_synced": stats.get("created", 0),
@@ -89,6 +92,7 @@ async def _run_sync_with_new_session() -> None:
             logger.info("Background sync completed: %s", stats)
 
         except Exception as e:
+            await session.rollback()
             _sync_status["last_sync_error"] = str(e)
             logger.error("Background sync failed: %s", e, exc_info=True)
         finally:

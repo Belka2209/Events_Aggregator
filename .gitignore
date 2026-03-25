@@ -137,5 +137,6 @@ desktop.ini
 Tasks__
 
 .kube/config
+.kube/
 
 .ruff_cache

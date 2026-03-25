@@ -212,6 +212,7 @@ class TestEventsProviderClient:
 
         mock_response = MagicMock()
         mock_response.json.return_value = mock_data
+        mock_response.is_error = False
         mock_response.raise_for_status.return_value = None
 
         mock_client = MagicMock()

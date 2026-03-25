@@ -40,11 +40,11 @@ class SyncEventsUsecase:
         if last_sync and last_sync.last_changed_at:
             # Инкрементальная синхронизация - используем дату из БД
             changed_at_str = last_sync.last_changed_at.strftime("%Y-%m-%d")
-            logger.info(f"Incremental sync with changed_at={changed_at_str}")
+            logger.info("Incremental sync with changed_at=%s", changed_at_str)
         else:
             # Первая синхронизация - получаем все события
             changed_at_str = "2000-01-01"
-            logger.info(f"Initial sync with changed_at={changed_at_str}")
+            logger.info("Initial sync with changed_at=%s", changed_at_str)
 
         stats = {"created": 0, "updated": 0, "errors": 0}
 
@@ -82,8 +82,6 @@ class SyncEventsUsecase:
                         ),
                     )
                     await self._place_repo.upsert(place)
-                    # Commit place so event can reference it
-                    await self._place_repo._session.commit()
 
                     # Upsert event
                     event = Event(
@@ -119,14 +117,14 @@ class SyncEventsUsecase:
                         await self._event_repo.upsert(event)
                         stats["created"] += 1
 
-                    # Commit each event
-                    await self._event_repo._session.commit()
-
                 except Exception as e:
-                    logger.error(f"Error processing event {event_data.id}: {e}")
+                    logger.error("Error processing event %s: %s", event_data.id, e)
                     stats["errors"] += 1
 
-            logger.info(f"Total events processed: {event_count}")
+            # The session will be committed by the calling function
+            # await self._event_repo.commit()
+
+            logger.info("Total events processed: %d", event_count)
 
             # Сохраняем состояние синхронизации
             if max_changed_at:
@@ -134,8 +132,8 @@ class SyncEventsUsecase:
                     last_changed_at=max_changed_at,
                     sync_status="success",
                 )
-                await self._sync_state_repo._session.commit()
-                logger.info(f"Saved sync state with last_changed_at={max_changed_at}")
+                # await self._sync_state_repo.commit()
+                logger.info("Saved sync state with last_changed_at=%s", max_changed_at)
             else:
                 # Если не было событий, сохраняем текущую дату
                 current_date = datetime.now(timezone.utc)
@@ -144,22 +142,24 @@ class SyncEventsUsecase:
                     sync_status="success",
                     error_message="No events found",
                 )
-                await self._sync_state_repo._session.commit()
-                logger.info(f"No events found, saved current date={current_date}")
+                # await self._sync_state_repo.commit()
+                logger.info("No events found, saved current date=%s", current_date)
 
             logger.info(
-                f"Sync completed: {stats['created']} created, "
-                f"{stats['updated']} updated, {stats['errors']} errors",
+                "Sync completed: %d created, %d updated, %d errors",
+                stats["created"],
+                stats["updated"],
+                stats["errors"],
             )
 
         except Exception as e:
-            logger.error(f"Sync failed: {e}", exc_info=True)
+            logger.error("Sync failed: %s", e, exc_info=True)
             await self._sync_state_repo.create(
                 last_changed_at=last_sync.last_changed_at if last_sync else None,
                 sync_status="failed",
                 error_message=str(e),
             )
-            await self._sync_state_repo._session.commit()
+            await self._sync_state_repo.commit()
             stats["error"] = str(e)
 
         return stats

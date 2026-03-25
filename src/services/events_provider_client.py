@@ -1,11 +1,22 @@
 """Events Provider API client."""
 
+import logging
 from dataclasses import dataclass
 
 import httpx
-from fastapi import HTTPException
 
 from src.core.settings import settings
+
+logger = logging.getLogger(__name__)
+
+
+class ProviderError(Exception):
+    """Exception raised for provider API errors."""
+
+    def __init__(self, status_code: int, detail: str):
+        self.status_code = status_code
+        self.detail = detail
+        super().__init__(f"Provider error {status_code}: {detail}")
 
 
 @dataclass
@@ -93,17 +104,15 @@ class EventsProviderClient:
         if cursor:
             params["cursor"] = cursor
 
-        print(f"Requesting events: url={url}, params={params}")
+        logger.debug("Requesting events: url=%s, params=%s", url, params)
         async with httpx.AsyncClient(timeout=self._timeout) as client:
             response = await client.get(url, params=params, headers=self._get_headers())
             response.raise_for_status()
             data = response.json()
-            print(f"Response status: {response.status_code}")
+            logger.debug("Response status: %s", response.status_code)
 
-            response.raise_for_status()
-            data = response.json()
-            print(f"Response has {len(data.get('results', []))} results")
-            print(f"Next URL: {data.get('next')}")
+            logger.debug("Response has %d results", len(data.get("results", [])))
+            logger.debug("Next URL: %s", data.get("next"))
 
         events = []
         for event_data in data["results"]:
@@ -130,7 +139,7 @@ class EventsProviderClient:
                 status_changed_at=event_data.get("status_changed_at"),
             )
             events.append(event)
-        print(f"Returning {len(events)} events")
+        logger.debug("Returning %d events", len(events))
         return events, data.get("next")
 
     async def get_seats(self, event_id: str) -> SeatsData:
@@ -209,7 +218,7 @@ class EventsProviderClient:
                     detail = response.json().get("detail", detail)
                 except Exception:
                     pass
-                raise HTTPException(status_code=response.status_code, detail=detail)
+                raise ProviderError(status_code=response.status_code, detail=detail)
 
             data = response.json()
 
