@@ -1,7 +1,8 @@
 """Tests for EventsPaginator."""
 
-import pytest
 from unittest.mock import AsyncMock, MagicMock
+
+import pytest
 
 from src.services.events_paginator import EventsPaginator
 from src.services.events_provider_client import EventData, EventsProviderClient
