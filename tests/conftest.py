@@ -1,15 +1,23 @@
 """Pytest configuration and fixtures."""
 
-from collections.abc import AsyncGenerator
 from unittest.mock import MagicMock
-
+from datetime import datetime, timezone
 import pytest
 from httpx import ASGITransport, AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
+from collections.abc import AsyncGenerator
 from src.api.app import app
 from src.core.database import Base, get_session
 from src.core.dependencies import get_events_provider_client
+
+# Repository fixtures
+from src.repositories.event_repository import SQLAlchemyEventRepository
+from src.repositories.place_repository import SQLAlchemyPlaceRepository
+from src.repositories.sync_state_repository import SQLAlchemySyncStateRepository
+from src.repositories.ticket_repository import SQLAlchemyTicketRepository
+
+from src.models.event import Event, Place
 
 
 @pytest.fixture(scope="session")
@@ -83,13 +91,6 @@ async def client(
     app.dependency_overrides.clear()
 
 
-# Repository fixtures
-from src.repositories.event_repository import SQLAlchemyEventRepository
-from src.repositories.place_repository import SQLAlchemyPlaceRepository
-from src.repositories.sync_state_repository import SQLAlchemySyncStateRepository
-from src.repositories.ticket_repository import SQLAlchemyTicketRepository
-
-
 @pytest.fixture
 def event_repository(db_session: AsyncSession) -> SQLAlchemyEventRepository:
     """Create event repository fixture."""
@@ -112,11 +113,6 @@ def ticket_repository(db_session: AsyncSession) -> SQLAlchemyTicketRepository:
 def sync_state_repository(db_session: AsyncSession) -> SQLAlchemySyncStateRepository:
     """Create sync state repository fixture."""
     return SQLAlchemySyncStateRepository(db_session)
-
-
-from datetime import datetime, timezone
-
-from src.models.event import Event, Place
 
 
 @pytest.fixture
