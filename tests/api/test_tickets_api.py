@@ -1,9 +1,11 @@
 """Tests for tickets API."""
 
-import pytest
 import uuid
-from httpx import AsyncClient
 from unittest.mock import AsyncMock, MagicMock
+
+import pytest
+from httpx import AsyncClient
+
 from src.models.event import Event
 from src.services.events_provider_client import RegistrationData
 
@@ -62,8 +64,9 @@ async def test_unregister_ticket(
     ticket_id = str(uuid.uuid4())
 
     # Create a ticket in DB
-    from src.models.ticket import Ticket
     from datetime import datetime, timezone
+
+    from src.models.ticket import Ticket
 
     ticket = Ticket(
         ticket_id=ticket_id,

@@ -1,6 +1,5 @@
 """Pytest configuration and fixtures."""
 
-import asyncio
 from collections.abc import AsyncGenerator
 from unittest.mock import MagicMock
 
@@ -87,8 +86,8 @@ async def client(
 # Repository fixtures
 from src.repositories.event_repository import SQLAlchemyEventRepository
 from src.repositories.place_repository import SQLAlchemyPlaceRepository
-from src.repositories.ticket_repository import SQLAlchemyTicketRepository
 from src.repositories.sync_state_repository import SQLAlchemySyncStateRepository
+from src.repositories.ticket_repository import SQLAlchemyTicketRepository
 
 
 @pytest.fixture
@@ -116,7 +115,8 @@ def sync_state_repository(db_session: AsyncSession) -> SQLAlchemySyncStateReposi
 
 
 from datetime import datetime, timezone
-from src.models.event import Place, Event
+
+from src.models.event import Event, Place
 
 
 @pytest.fixture

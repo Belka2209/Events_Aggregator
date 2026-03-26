@@ -1,11 +1,15 @@
 """Tests for ticket usecases."""
 
-import pytest
+from datetime import datetime, timezone
 from unittest.mock import AsyncMock, MagicMock
+
+import pytest
+
+from src.models.event import Event
+from src.models.ticket import Ticket
+from src.services.events_provider_client import RegistrationData, UnregisterData
 from src.usecases.create_ticket import CreateTicketUsecase
 from src.usecases.delete_ticket import DeleteTicketUsecase
-from src.services.events_provider_client import RegistrationData, UnregisterData
-from src.models.event import Event
 
 
 @pytest.mark.asyncio
@@ -44,9 +48,6 @@ async def test_delete_ticket_usecase(sample_event: Event, ticket_repository):
     mock_client.unregister = AsyncMock(return_value=UnregisterData(success=True))
 
     # We need a ticket in the repo for DeleteTicketUsecase to find it
-    from src.models.ticket import Ticket
-    from datetime import datetime, timezone
-
     ticket = Ticket(
         ticket_id="test-ticket-id",
         event_id=sample_event.id,

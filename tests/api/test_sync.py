@@ -1,8 +1,9 @@
 """Tests for sync API."""
 
+from unittest.mock import AsyncMock, patch
+
 import pytest
 from httpx import AsyncClient
-from unittest.mock import AsyncMock, patch
 
 
 @pytest.mark.asyncio

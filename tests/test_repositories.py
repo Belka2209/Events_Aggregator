@@ -1,10 +1,11 @@
 """Tests for repositories."""
 
-import pytest
 from datetime import datetime, timezone
-from src.models.event import Place, Event
+
+import pytest
+
+from src.models.event import Event, Place
 from src.models.ticket import Ticket
-from src.models.sync_state import SyncState
 
 
 @pytest.mark.asyncio

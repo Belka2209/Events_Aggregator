@@ -1,10 +1,12 @@
 """Tests for sync events usecase."""
 
-import pytest
-from unittest.mock import MagicMock, patch
 from datetime import datetime, timezone
-from src.usecases.sync_events import SyncEventsUsecase
+from unittest.mock import MagicMock, patch
+
+import pytest
+
 from src.services.events_provider_client import EventData, PlaceData
+from src.usecases.sync_events import SyncEventsUsecase
 
 
 @pytest.mark.asyncio

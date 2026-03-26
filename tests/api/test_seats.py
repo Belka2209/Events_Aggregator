@@ -1,8 +1,10 @@
 """Tests for seats API."""
 
+from unittest.mock import AsyncMock, MagicMock
+
 import pytest
 from httpx import AsyncClient
-from unittest.mock import AsyncMock, MagicMock
+
 from src.models.event import Event
 from src.services.events_provider_client import SeatsData
 
