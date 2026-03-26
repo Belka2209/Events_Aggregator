@@ -103,5 +103,5 @@ class CreateTicketUsecase:
         await self._ticket_repo.create(ticket)
         # await self._ticket_repo.commit()
 
-        logger.info("Ticket created: %s for event %d", ticket.ticket_id, event.id)
+        logger.info("Ticket created: %s for event %s", ticket.ticket_id, event_id)
         return ticket

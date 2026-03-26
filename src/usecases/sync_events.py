@@ -132,7 +132,6 @@ class SyncEventsUsecase:
                     last_changed_at=max_changed_at,
                     sync_status="success",
                 )
-                # await self._sync_state_repo.commit()
                 logger.info("Saved sync state with last_changed_at=%s", max_changed_at)
             else:
                 # Если не было событий, сохраняем текущую дату
@@ -142,7 +141,6 @@ class SyncEventsUsecase:
                     sync_status="success",
                     error_message="No events found",
                 )
-                # await self._sync_state_repo.commit()
                 logger.info("No events found, saved current date=%s", current_date)
 
             logger.info(
@@ -159,7 +157,6 @@ class SyncEventsUsecase:
                 sync_status="failed",
                 error_message=str(e),
             )
-            await self._sync_state_repo.commit()
             stats["error"] = str(e)
 
         return stats

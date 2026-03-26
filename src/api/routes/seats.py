@@ -8,6 +8,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.core.database import get_session
+from src.core.dependencies import get_events_provider_client
 from src.repositories.event_repository import SQLAlchemyEventRepository
 from src.schemas.api_schemas import SeatsResponse
 from src.services.events_provider_client import EventsProviderClient
@@ -24,12 +25,14 @@ _CACHE_TTL_SECONDS = 30
 async def get_seats(
     session: Annotated[AsyncSession, Depends(get_session)],
     event_id: str,
+    client: EventsProviderClient = Depends(get_events_provider_client),
 ) -> SeatsResponse:
     """Get available seats for an event.
 
     Args:
         session: Database session.
         event_id: Event UUID.
+        client: Events Provider client.
 
     Returns:
         List of available seats.
@@ -50,11 +53,10 @@ async def get_seats(
         raise HTTPException(status_code=404, detail="Event not found")
 
     # Get seats from Events Provider API
-    client = EventsProviderClient()
     try:
         seats_data = await client.get_seats(event_id)
     except Exception as e:
-        logger.error("Error getting seats for event %s: %d", event_id, e)
+        logger.error("Error getting seats for event %s: %s", event_id, e)
         raise HTTPException(status_code=500, detail="Failed to get seats from provider")
 
     # Update cache
