@@ -5,7 +5,10 @@ import logging
 from fastapi import HTTPException
 
 from src.repositories.ticket_repository import TicketRepository
-from src.services.events_provider_client import EventsProviderClient, ProviderError
+from src.services.events_provider_client import (
+    EventsProviderClient,
+    ProviderError,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -38,10 +41,18 @@ class DeleteTicketUsecase:
 
         # Unregister from Events Provider API
         try:
-            await self._client.unregister(event_id=ticket.event_id, ticket_id=ticket_id)
+            await self._client.unregister(
+                event_id=ticket.event_id, ticket_id=ticket_id
+            )
         except ProviderError as e:
-            logger.error("Provider error unregistering ticket %s: %s", ticket_id, e.detail)
-            raise HTTPException(status_code=500, detail="Failed to unregister from provider")
+            logger.error(
+                "Provider error unregistering ticket %s: %s",
+                ticket_id,
+                e.detail,
+            )
+            raise HTTPException(
+                status_code=500, detail="Failed to unregister from provider"
+            )
 
         # Delete ticket from local DB
         await self._ticket_repo.delete(ticket)

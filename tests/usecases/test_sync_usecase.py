@@ -10,7 +10,9 @@ from src.usecases.sync_events import SyncEventsUsecase
 
 
 @pytest.mark.asyncio
-async def test_sync_events_initial(event_repository, place_repository, sync_state_repository):
+async def test_sync_events_initial(
+    event_repository, place_repository, sync_state_repository
+):
     """Test initial synchronization."""
     mock_client = MagicMock()
 
@@ -41,7 +43,9 @@ async def test_sync_events_initial(event_repository, place_repository, sync_stat
     mock_paginator = MagicMock()
     mock_paginator.__aiter__.return_value = [event_data]
 
-    with patch("src.usecases.sync_events.EventsPaginator", return_value=mock_paginator):
+    with patch(
+        "src.usecases.sync_events.EventsPaginator", return_value=mock_paginator
+    ):
         usecase = SyncEventsUsecase(
             client=mock_client,
             event_repo=event_repository,
@@ -67,13 +71,17 @@ async def test_sync_events_initial(event_repository, place_repository, sync_stat
 
 
 @pytest.mark.asyncio
-async def test_sync_events_incremental(event_repository, place_repository, sync_state_repository):
+async def test_sync_events_incremental(
+    event_repository, place_repository, sync_state_repository
+):
     """Test incremental synchronization."""
     mock_client = MagicMock()
 
     # Create previous sync state
     last_sync_date = datetime(2023, 1, 1, tzinfo=timezone.utc)
-    await sync_state_repository.create(last_changed_at=last_sync_date, sync_status="success")
+    await sync_state_repository.create(
+        last_changed_at=last_sync_date, sync_status="success"
+    )
 
     # Mock event data with later date
     now_iso = datetime.now(timezone.utc).isoformat()
@@ -101,7 +109,9 @@ async def test_sync_events_incremental(event_repository, place_repository, sync_
     mock_paginator = MagicMock()
     mock_paginator.__aiter__.return_value = [event_data]
 
-    with patch("src.usecases.sync_events.EventsPaginator", return_value=mock_paginator):
+    with patch(
+        "src.usecases.sync_events.EventsPaginator", return_value=mock_paginator
+    ):
         usecase = SyncEventsUsecase(
             client=mock_client,
             event_repo=event_repository,
@@ -127,12 +137,17 @@ async def test_sync_events_incremental(event_repository, place_repository, sync_
 
 
 @pytest.mark.asyncio
-async def test_sync_events_failure(event_repository, place_repository, sync_state_repository):
+async def test_sync_events_failure(
+    event_repository, place_repository, sync_state_repository
+):
     """Test synchronization failure."""
     mock_client = MagicMock()
 
     # Mock Paginator to raise error
-    with patch("src.usecases.sync_events.EventsPaginator", side_effect=Exception("API Error")):
+    with patch(
+        "src.usecases.sync_events.EventsPaginator",
+        side_effect=Exception("API Error"),
+    ):
         usecase = SyncEventsUsecase(
             client=mock_client,
             event_repo=event_repository,

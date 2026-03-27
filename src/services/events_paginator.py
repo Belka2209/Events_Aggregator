@@ -38,7 +38,9 @@ class EventsPaginator:
                 cursor=cursor,
             )
 
-            logger.debug("Got %d events, next_cursor=%s", len(events), next_cursor)
+            logger.debug(
+                "Got %d events, next_cursor=%s", len(events), next_cursor
+            )
 
             for event in events:
                 yield event

@@ -6,7 +6,11 @@ from unittest.mock import MagicMock
 
 import pytest
 from httpx import ASGITransport, AsyncClient
-from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
+from sqlalchemy.ext.asyncio import (
+    AsyncSession,
+    async_sessionmaker,
+    create_async_engine,
+)
 
 from src.api.app import app
 from src.core.database import Base, get_session
@@ -16,7 +20,9 @@ from src.models.event import Event, Place
 # Repository fixtures
 from src.repositories.event_repository import SQLAlchemyEventRepository
 from src.repositories.place_repository import SQLAlchemyPlaceRepository
-from src.repositories.sync_state_repository import SQLAlchemySyncStateRepository
+from src.repositories.sync_state_repository import (
+    SQLAlchemySyncStateRepository,
+)
 from src.repositories.ticket_repository import SQLAlchemyTicketRepository
 
 
@@ -79,9 +85,13 @@ async def client(
         return mock_provider_client
 
     app.dependency_overrides[get_session] = override_get_session
-    app.dependency_overrides[get_events_provider_client] = override_get_events_provider_client
+    app.dependency_overrides[get_events_provider_client] = (
+        override_get_events_provider_client
+    )
 
-    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as ac:
+    async with AsyncClient(
+        transport=ASGITransport(app=app), base_url="http://test"
+    ) as ac:
         yield ac
 
     app.dependency_overrides.clear()
@@ -106,7 +116,9 @@ def ticket_repository(db_session: AsyncSession) -> SQLAlchemyTicketRepository:
 
 
 @pytest.fixture
-def sync_state_repository(db_session: AsyncSession) -> SQLAlchemySyncStateRepository:
+def sync_state_repository(
+    db_session: AsyncSession,
+) -> SQLAlchemySyncStateRepository:
     """Create sync state repository fixture."""
     return SQLAlchemySyncStateRepository(db_session)
 

@@ -40,7 +40,9 @@ class SQLAlchemyPlaceRepository:
         Returns:
             Place or None.
         """
-        result = await self._session.execute(select(Place).where(Place.id == place_id))
+        result = await self._session.execute(
+            select(Place).where(Place.id == place_id)
+        )
         return result.scalar_one_or_none()
 
     async def upsert(self, place: Place) -> Place:

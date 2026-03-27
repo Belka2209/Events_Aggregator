@@ -52,7 +52,9 @@ class SQLAlchemyEventRepository:
             Event or None.
         """
         result = await self._session.execute(
-            select(Event).options(selectinload(Event.place)).where(Event.id == event_id),
+            select(Event)
+            .options(selectinload(Event.place))
+            .where(Event.id == event_id),
         )
         return result.scalar_one_or_none()
 

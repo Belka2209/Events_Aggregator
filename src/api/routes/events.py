@@ -48,7 +48,9 @@ def build_previous_url(
 async def get_events(
     request: Request,
     session: Annotated[AsyncSession, Depends(get_session)],
-    date_from: str | None = Query(None, description="Filter events after this date (YYYY-MM-DD)"),
+    date_from: str | None = Query(
+        None, description="Filter events after this date (YYYY-MM-DD)"
+    ),
     page: int = Query(1, ge=1, description="Page number"),
     page_size: int = Query(20, ge=1, le=100, description="Page size"),
 ) -> EventsListResponse:
@@ -68,9 +70,14 @@ async def get_events(
     date_from_dt: datetime | None = None
     if date_from:
         try:
-            date_from_dt = datetime.strptime(date_from, "%Y-%m-%d").replace(tzinfo=timezone.utc)
+            date_from_dt = datetime.strptime(date_from, "%Y-%m-%d").replace(
+                tzinfo=timezone.utc
+            )
         except ValueError:
-            raise HTTPException(status_code=400, detail="Invalid date_from format. Use YYYY-MM-DD")
+            raise HTTPException(
+                status_code=400,
+                detail="Invalid date_from format. Use YYYY-MM-DD",
+            )
     # Get repository
     repo = SQLAlchemyEventRepository(session)
 
@@ -102,7 +109,9 @@ async def get_events(
     ]
 
     next_url = (
-        build_next_url(request, page, page_size, date_from) if len(events) == page_size else None
+        build_next_url(request, page, page_size, date_from)
+        if len(events) == page_size
+        else None
     )
     previous_url = build_previous_url(request, page, page_size, date_from)
 

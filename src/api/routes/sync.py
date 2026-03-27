@@ -8,7 +8,9 @@ from src.core.database import async_session_maker
 from src.core.dependencies import get_events_provider_client
 from src.repositories.event_repository import SQLAlchemyEventRepository
 from src.repositories.place_repository import SQLAlchemyPlaceRepository
-from src.repositories.sync_state_repository import SQLAlchemySyncStateRepository
+from src.repositories.sync_state_repository import (
+    SQLAlchemySyncStateRepository,
+)
 from src.schemas.api_schemas import SyncTriggerResponse
 from src.services.events_provider_client import EventsProviderClient
 from src.usecases.sync_events import SyncEventsUsecase

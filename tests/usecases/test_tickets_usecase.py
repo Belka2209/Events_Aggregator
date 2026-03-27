@@ -7,22 +7,31 @@ import pytest
 
 from src.models.event import Event
 from src.models.ticket import Ticket
-from src.services.events_provider_client import RegistrationData, UnregisterData
+from src.services.events_provider_client import (
+    RegistrationData,
+    UnregisterData,
+)
 from src.usecases.create_ticket import CreateTicketUsecase
 from src.usecases.delete_ticket import DeleteTicketUsecase
 
 
 @pytest.mark.asyncio
-async def test_create_ticket_usecase(sample_event: Event, ticket_repository, event_repository):
+async def test_create_ticket_usecase(
+    sample_event: Event, ticket_repository, event_repository
+):
     """Test CreateTicketUsecase."""
     mock_client = MagicMock()
-    mock_client.register = AsyncMock(return_value=RegistrationData(ticket_id="test-ticket-id"))
+    mock_client.register = AsyncMock(
+        return_value=RegistrationData(ticket_id="test-ticket-id")
+    )
 
     # Note: CreateTicketUsecase checks event status.
     sample_event.status = "published"
 
     usecase = CreateTicketUsecase(
-        event_repo=event_repository, ticket_repo=ticket_repository, client=mock_client
+        event_repo=event_repository,
+        ticket_repo=ticket_repository,
+        client=mock_client,
     )
 
     result = await usecase.execute(
@@ -41,7 +50,9 @@ async def test_create_ticket_usecase(sample_event: Event, ticket_repository, eve
 async def test_delete_ticket_usecase(sample_event: Event, ticket_repository):
     """Test DeleteTicketUsecase."""
     mock_client = MagicMock()
-    mock_client.unregister = AsyncMock(return_value=UnregisterData(success=True))
+    mock_client.unregister = AsyncMock(
+        return_value=UnregisterData(success=True)
+    )
 
     # We need a ticket in the repo for DeleteTicketUsecase to find it
     ticket = Ticket(
@@ -55,7 +66,9 @@ async def test_delete_ticket_usecase(sample_event: Event, ticket_repository):
     )
     await ticket_repository.create(ticket)
 
-    usecase = DeleteTicketUsecase(ticket_repo=ticket_repository, client=mock_client)
+    usecase = DeleteTicketUsecase(
+        ticket_repo=ticket_repository, client=mock_client
+    )
 
     await usecase.execute(ticket_id="test-ticket-id")
 

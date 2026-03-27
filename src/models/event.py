@@ -18,16 +18,26 @@ class Place(Base):
 
     __tablename__ = "places"
 
-    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    id: Mapped[str] = mapped_column(
+        String(36), primary_key=True, default=lambda: str(uuid.uuid4())
+    )
     name: Mapped[str] = mapped_column(String(255), nullable=False)
     city: Mapped[str] = mapped_column(String(100), nullable=False)
     address: Mapped[str] = mapped_column(String(500), nullable=False)
-    seats_pattern: Mapped[str | None] = mapped_column(String(500), nullable=True)
-    changed_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=True)
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=True)
+    seats_pattern: Mapped[str | None] = mapped_column(
+        String(500), nullable=True
+    )
+    changed_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
 
     # Relationship
-    events: Mapped[list["Event"]] = relationship(back_populates="place", lazy="selectin")
+    events: Mapped[list["Event"]] = relationship(
+        back_populates="place", lazy="selectin"
+    )
 
     def __repr__(self) -> str:
         return f"<Place(id={self.id}, name={self.name}, city={self.city})>"
@@ -40,21 +50,33 @@ class Event(Base):
 
     id: Mapped[str] = mapped_column(String(36), primary_key=True)
     name: Mapped[str] = mapped_column(String(255), nullable=False)
-    place_id: Mapped[str] = mapped_column(ForeignKey("places.id"), nullable=False)
-    event_time: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    place_id: Mapped[str] = mapped_column(
+        ForeignKey("places.id"), nullable=False
+    )
+    event_time: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False
+    )
     registration_deadline: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True
     )
-    status: Mapped[str] = mapped_column(String(50), nullable=False, default="new")
+    status: Mapped[str] = mapped_column(
+        String(50), nullable=False, default="new"
+    )
     number_of_visitors: Mapped[int] = mapped_column(Integer, default=0)
-    changed_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=True)
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=True)
+    changed_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
     status_changed_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True
     )
 
     # Relationships
-    place: Mapped["Place"] = relationship(back_populates="events", lazy="selectin")
+    place: Mapped["Place"] = relationship(
+        back_populates="events", lazy="selectin"
+    )
     tickets: Mapped[list["Ticket"]] = relationship(
         back_populates="event",
         cascade="all, delete-orphan",

@@ -34,7 +34,9 @@ async def test_event_repository_upsert(event_repository, sample_place):
 async def test_place_repository_upsert(place_repository):
     """Test PlaceRepository upsert."""
     place_id = "new-place-id"
-    place = Place(id=place_id, name="New Place", city="New City", address="New Address")
+    place = Place(
+        id=place_id, name="New Place", city="New City", address="New Address"
+    )
 
     # Test insert
     saved = await place_repository.upsert(place)
@@ -47,7 +49,9 @@ async def test_place_repository_upsert(place_repository):
 
 
 @pytest.mark.asyncio
-async def test_ticket_repository_create_get_delete(ticket_repository, sample_event):
+async def test_ticket_repository_create_get_delete(
+    ticket_repository, sample_event
+):
     """Test TicketRepository operations."""
     ticket_id = "test-ticket-id"
     ticket = Ticket(
@@ -80,7 +84,9 @@ async def test_sync_state_repository_create_get_latest(sync_state_repository):
     last_changed = datetime(2023, 5, 1, tzinfo=timezone.utc)
 
     # Test create
-    await sync_state_repository.create(last_changed_at=last_changed, sync_status="success")
+    await sync_state_repository.create(
+        last_changed_at=last_changed, sync_status="success"
+    )
 
     # Test get_latest
     latest = await sync_state_repository.get_latest()

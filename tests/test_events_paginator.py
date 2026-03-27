@@ -35,7 +35,10 @@ async def test_paginator_single_page(mock_provider_client):
         )
         for i in range(5)
     ]
-    mock_provider_client.events.return_value = (mock_events, None)  # No next cursor
+    mock_provider_client.events.return_value = (
+        mock_events,
+        None,
+    )  # No next cursor
     paginator = EventsPaginator(mock_provider_client, "2023-01-01")
 
     # Act
@@ -44,7 +47,9 @@ async def test_paginator_single_page(mock_provider_client):
     # Assert
     assert len(results) == 5
     assert results[0].id == "evt_0"
-    mock_provider_client.events.assert_awaited_once_with(changed_at="2023-01-01", cursor=None)
+    mock_provider_client.events.assert_awaited_once_with(
+        changed_at="2023-01-01", cursor=None
+    )
 
 
 @pytest.mark.asyncio
@@ -94,8 +99,12 @@ async def test_paginator_multiple_pages(mock_provider_client):
     assert results[0].id == "evt_1"
     assert results[1].id == "evt_2"
     assert mock_provider_client.events.call_count == 2
-    mock_provider_client.events.assert_any_await(changed_at="2023-01-01", cursor=None)
-    mock_provider_client.events.assert_any_await(changed_at="2023-01-01", cursor="p2")
+    mock_provider_client.events.assert_any_await(
+        changed_at="2023-01-01", cursor=None
+    )
+    mock_provider_client.events.assert_any_await(
+        changed_at="2023-01-01", cursor="p2"
+    )
 
 
 @pytest.mark.asyncio

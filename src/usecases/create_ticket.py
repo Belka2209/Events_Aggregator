@@ -8,7 +8,10 @@ from fastapi import HTTPException
 from src.models.ticket import Ticket
 from src.repositories.event_repository import EventRepository
 from src.repositories.ticket_repository import TicketRepository
-from src.services.events_provider_client import EventsProviderClient, ProviderError
+from src.services.events_provider_client import (
+    EventsProviderClient,
+    ProviderError,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -63,8 +66,13 @@ class CreateTicketUsecase:
             )
 
         # Validate registration deadline
-        if event.registration_deadline and datetime.now(timezone.utc) > event.registration_deadline:
-            raise HTTPException(status_code=400, detail="Registration deadline has passed")
+        if (
+            event.registration_deadline
+            and datetime.now(timezone.utc) > event.registration_deadline
+        ):
+            raise HTTPException(
+                status_code=400, detail="Registration deadline has passed"
+            )
 
         # Register with Events Provider API
         try:
@@ -77,9 +85,13 @@ class CreateTicketUsecase:
             )
         except ProviderError as e:
             if e.status_code == 400:
-                raise HTTPException(status_code=400, detail="Seat is not available")
+                raise HTTPException(
+                    status_code=400, detail="Seat is not available"
+                )
             if e.status_code == 404:
-                raise HTTPException(status_code=404, detail="Event not found in provider")
+                raise HTTPException(
+                    status_code=404, detail="Event not found in provider"
+                )
             logger.error("Provider error during registration: %s", e.detail)
             raise HTTPException(status_code=500, detail="Provider error")
 
@@ -96,5 +108,7 @@ class CreateTicketUsecase:
         await self._ticket_repo.create(ticket)
         # await self._ticket_repo.commit()
 
-        logger.info("Ticket created: %s for event %s", ticket.ticket_id, event_id)
+        logger.info(
+            "Ticket created: %s for event %s", ticket.ticket_id, event_id
+        )
         return ticket

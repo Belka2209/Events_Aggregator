@@ -59,8 +59,13 @@ class SyncEventsUsecase:
 
                 try:
                     # Парсим changed_at для отслеживания максимума
-                    event_changed_at = datetime.fromisoformat(event_data.changed_at)
-                    if max_changed_at is None or event_changed_at > max_changed_at:
+                    event_changed_at = datetime.fromisoformat(
+                        event_data.changed_at
+                    )
+                    if (
+                        max_changed_at is None
+                        or event_changed_at > max_changed_at
+                    ):
                         max_changed_at = event_changed_at
 
                     # Upsert place
@@ -88,9 +93,13 @@ class SyncEventsUsecase:
                         id=event_data.id,
                         name=event_data.name,
                         place_id=event_data.place.id,
-                        event_time=datetime.fromisoformat(event_data.event_time),
+                        event_time=datetime.fromisoformat(
+                            event_data.event_time
+                        ),
                         registration_deadline=(
-                            datetime.fromisoformat(event_data.registration_deadline)
+                            datetime.fromisoformat(
+                                event_data.registration_deadline
+                            )
                             if event_data.registration_deadline
                             else None
                         ),
@@ -103,7 +112,9 @@ class SyncEventsUsecase:
                             else None
                         ),
                         status_changed_at=(
-                            datetime.fromisoformat(event_data.status_changed_at)
+                            datetime.fromisoformat(
+                                event_data.status_changed_at
+                            )
                             if event_data.status_changed_at
                             else None
                         ),
@@ -118,7 +129,9 @@ class SyncEventsUsecase:
                         stats["created"] += 1
 
                 except Exception as e:
-                    logger.error("Error processing event %s: %s", event_data.id, e)
+                    logger.error(
+                        "Error processing event %s: %s", event_data.id, e
+                    )
                     stats["errors"] += 1
 
             # The session will be committed by the calling function
@@ -132,7 +145,9 @@ class SyncEventsUsecase:
                     last_changed_at=max_changed_at,
                     sync_status="success",
                 )
-                logger.info("Saved sync state with last_changed_at=%s", max_changed_at)
+                logger.info(
+                    "Saved sync state with last_changed_at=%s", max_changed_at
+                )
             else:
                 # Если не было событий, сохраняем текущую дату
                 current_date = datetime.now(timezone.utc)
@@ -141,7 +156,9 @@ class SyncEventsUsecase:
                     sync_status="success",
                     error_message="No events found",
                 )
-                logger.info("No events found, saved current date=%s", current_date)
+                logger.info(
+                    "No events found, saved current date=%s", current_date
+                )
 
             logger.info(
                 "Sync completed: %d created, %d updated, %d errors",
@@ -153,7 +170,9 @@ class SyncEventsUsecase:
         except Exception as e:
             logger.error("Sync failed: %s", e, exc_info=True)
             await self._sync_state_repo.create(
-                last_changed_at=last_sync.last_changed_at if last_sync else None,
+                last_changed_at=last_sync.last_changed_at
+                if last_sync
+                else None,
                 sync_status="failed",
                 error_message=str(e),
             )
