@@ -43,9 +43,7 @@ async def test_sync_events_initial(
     mock_paginator = MagicMock()
     mock_paginator.__aiter__.return_value = [event_data]
 
-    with patch(
-        "src.usecases.sync_events.EventsPaginator", return_value=mock_paginator
-    ):
+    with patch("src.usecases.sync_events.EventsPaginator", return_value=mock_paginator):
         usecase = SyncEventsUsecase(
             client=mock_client,
             event_repo=event_repository,
@@ -109,9 +107,7 @@ async def test_sync_events_incremental(
     mock_paginator = MagicMock()
     mock_paginator.__aiter__.return_value = [event_data]
 
-    with patch(
-        "src.usecases.sync_events.EventsPaginator", return_value=mock_paginator
-    ):
+    with patch("src.usecases.sync_events.EventsPaginator", return_value=mock_paginator):
         usecase = SyncEventsUsecase(
             client=mock_client,
             event_repo=event_repository,

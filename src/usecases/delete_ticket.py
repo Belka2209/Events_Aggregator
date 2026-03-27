@@ -41,9 +41,7 @@ class DeleteTicketUsecase:
 
         # Unregister from Events Provider API
         try:
-            await self._client.unregister(
-                event_id=ticket.event_id, ticket_id=ticket_id
-            )
+            await self._client.unregister(event_id=ticket.event_id, ticket_id=ticket_id)
         except ProviderError as e:
             logger.error(
                 "Provider error unregistering ticket %s: %s",

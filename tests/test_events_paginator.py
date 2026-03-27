@@ -99,12 +99,8 @@ async def test_paginator_multiple_pages(mock_provider_client):
     assert results[0].id == "evt_1"
     assert results[1].id == "evt_2"
     assert mock_provider_client.events.call_count == 2
-    mock_provider_client.events.assert_any_await(
-        changed_at="2023-01-01", cursor=None
-    )
-    mock_provider_client.events.assert_any_await(
-        changed_at="2023-01-01", cursor="p2"
-    )
+    mock_provider_client.events.assert_any_await(changed_at="2023-01-01", cursor=None)
+    mock_provider_client.events.assert_any_await(changed_at="2023-01-01", cursor="p2")
 
 
 @pytest.mark.asyncio

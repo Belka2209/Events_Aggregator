@@ -50,9 +50,7 @@ async def test_create_ticket_usecase(
 async def test_delete_ticket_usecase(sample_event: Event, ticket_repository):
     """Test DeleteTicketUsecase."""
     mock_client = MagicMock()
-    mock_client.unregister = AsyncMock(
-        return_value=UnregisterData(success=True)
-    )
+    mock_client.unregister = AsyncMock(return_value=UnregisterData(success=True))
 
     # We need a ticket in the repo for DeleteTicketUsecase to find it
     ticket = Ticket(
@@ -66,9 +64,7 @@ async def test_delete_ticket_usecase(sample_event: Event, ticket_repository):
     )
     await ticket_repository.create(ticket)
 
-    usecase = DeleteTicketUsecase(
-        ticket_repo=ticket_repository, client=mock_client
-    )
+    usecase = DeleteTicketUsecase(ticket_repo=ticket_repository, client=mock_client)
 
     await usecase.execute(ticket_id="test-ticket-id")
 

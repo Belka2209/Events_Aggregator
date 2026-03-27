@@ -21,9 +21,7 @@ class SyncState(Base):
         DateTime(timezone=True), nullable=True
     )
     sync_status: Mapped[str] = mapped_column(String(50), default="pending")
-    error_message: Mapped[str | None] = mapped_column(
-        String(1000), nullable=True
-    )
+    error_message: Mapped[str | None] = mapped_column(String(1000), nullable=True)
 
     def __repr__(self) -> str:
         return f"<SyncState(id={self.id}, status={self.sync_status})>"

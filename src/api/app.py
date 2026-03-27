@@ -77,9 +77,7 @@ async def validation_exception_handler(
 
 
 @app.exception_handler(Exception)
-async def global_exception_handler(
-    request: Request, exc: Exception
-) -> JSONResponse:
+async def global_exception_handler(request: Request, exc: Exception) -> JSONResponse:
     """Global exception handler."""
     logger.error("Unhandled exception: %s", exc, exc_info=True)
     return JSONResponse(

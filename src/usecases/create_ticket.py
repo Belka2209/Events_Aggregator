@@ -85,9 +85,7 @@ class CreateTicketUsecase:
             )
         except ProviderError as e:
             if e.status_code == 400:
-                raise HTTPException(
-                    status_code=400, detail="Seat is not available"
-                )
+                raise HTTPException(status_code=400, detail="Seat is not available")
             if e.status_code == 404:
                 raise HTTPException(
                     status_code=404, detail="Event not found in provider"
@@ -108,7 +106,5 @@ class CreateTicketUsecase:
         await self._ticket_repo.create(ticket)
         # await self._ticket_repo.commit()
 
-        logger.info(
-            "Ticket created: %s for event %s", ticket.ticket_id, event_id
-        )
+        logger.info("Ticket created: %s for event %s", ticket.ticket_id, event_id)
         return ticket

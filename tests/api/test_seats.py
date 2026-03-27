@@ -16,9 +16,7 @@ async def test_get_seats(
     """Test get available seats for an event."""
     mock_seats = ["A1", "A2", "B1"]
 
-    mock_provider_client.get_seats = AsyncMock(
-        return_value=SeatsData(seats=mock_seats)
-    )
+    mock_provider_client.get_seats = AsyncMock(return_value=SeatsData(seats=mock_seats))
 
     response = await client.get(f"/api/events/{sample_event.id}/seats")
 

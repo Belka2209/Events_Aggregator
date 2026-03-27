@@ -106,16 +106,12 @@ class EventsProviderClient:
 
         logger.debug("Requesting events: url=%s, params=%s", url, params)
         async with httpx.AsyncClient(timeout=self._timeout) as client:
-            response = await client.get(
-                url, params=params, headers=self._get_headers()
-            )
+            response = await client.get(url, params=params, headers=self._get_headers())
             response.raise_for_status()
             data = response.json()
             logger.debug("Response status: %s", response.status_code)
 
-            logger.debug(
-                "Response has %d results", len(data.get("results", []))
-            )
+            logger.debug("Response has %d results", len(data.get("results", [])))
             logger.debug("Next URL: %s", data.get("next"))
 
         events = []
@@ -193,17 +189,13 @@ class EventsProviderClient:
         }
 
         async with httpx.AsyncClient(timeout=self._timeout) as client:
-            response = await client.post(
-                url, json=payload, headers=self._get_headers()
-            )
+            response = await client.post(url, json=payload, headers=self._get_headers())
             response.raise_for_status()
             data = response.json()
 
         return RegistrationData(ticket_id=data["ticket_id"])
 
-    async def unregister(
-        self, event_id: str, ticket_id: str
-    ) -> UnregisterData:
+    async def unregister(self, event_id: str, ticket_id: str) -> UnregisterData:
         """Unregister from an event.
 
         Args:
@@ -226,9 +218,7 @@ class EventsProviderClient:
                     detail = response.json().get("detail", detail)
                 except Exception:
                     pass
-                raise ProviderError(
-                    status_code=response.status_code, detail=detail
-                )
+                raise ProviderError(status_code=response.status_code, detail=detail)
 
             data = response.json()
 
