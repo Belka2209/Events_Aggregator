@@ -50,9 +50,7 @@ class SQLAlchemyTicketRepository:
             Ticket or None.
         """
         result = await self._session.execute(
-            select(Ticket)
-            .options(selectinload(Ticket.event))
-            .where(Ticket.id == ticket_id),
+            select(Ticket).options(selectinload(Ticket.event)).where(Ticket.id == ticket_id),
         )
         return result.scalar_one_or_none()
 
@@ -66,9 +64,7 @@ class SQLAlchemyTicketRepository:
             Ticket or None.
         """
         result = await self._session.execute(
-            select(Ticket)
-            .options(selectinload(Ticket.event))
-            .where(Ticket.ticket_id == ticket_id),
+            select(Ticket).options(selectinload(Ticket.event)).where(Ticket.ticket_id == ticket_id),
         )
         return result.scalar_one_or_none()
 

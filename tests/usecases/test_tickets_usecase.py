@@ -13,14 +13,10 @@ from src.usecases.delete_ticket import DeleteTicketUsecase
 
 
 @pytest.mark.asyncio
-async def test_create_ticket_usecase(
-    sample_event: Event, ticket_repository, event_repository
-):
+async def test_create_ticket_usecase(sample_event: Event, ticket_repository, event_repository):
     """Test CreateTicketUsecase."""
     mock_client = MagicMock()
-    mock_client.register = AsyncMock(
-        return_value=RegistrationData(ticket_id="test-ticket-id")
-    )
+    mock_client.register = AsyncMock(return_value=RegistrationData(ticket_id="test-ticket-id"))
 
     # Note: CreateTicketUsecase checks event status.
     sample_event.status = "published"

@@ -44,9 +44,7 @@ async def test_paginator_single_page(mock_provider_client):
     # Assert
     assert len(results) == 5
     assert results[0].id == "evt_0"
-    mock_provider_client.events.assert_awaited_once_with(
-        changed_at="2023-01-01", cursor=None
-    )
+    mock_provider_client.events.assert_awaited_once_with(changed_at="2023-01-01", cursor=None)
 
 
 @pytest.mark.asyncio

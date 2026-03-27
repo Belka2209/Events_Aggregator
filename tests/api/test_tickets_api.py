@@ -27,9 +27,7 @@ async def test_register_ticket(
     # Ensure event is published
     sample_event.status = "published"
 
-    mock_provider_client.register = AsyncMock(
-        return_value=RegistrationData(ticket_id=ticket_id)
-    )
+    mock_provider_client.register = AsyncMock(return_value=RegistrationData(ticket_id=ticket_id))
 
     response = await client.post("/api/tickets", json=registration_payload)
 

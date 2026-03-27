@@ -18,9 +18,7 @@ class Ticket(Base):
 
     __tablename__ = "tickets"
 
-    id: Mapped[str] = mapped_column(
-        String(36), primary_key=True, default=lambda: str(uuid.uuid4())
-    )
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
     ticket_id: Mapped[str] = mapped_column(String(36), unique=True, nullable=False)
     event_id: Mapped[str] = mapped_column(ForeignKey("events.id"), nullable=False)
     first_name: Mapped[str] = mapped_column(String(100), nullable=False)

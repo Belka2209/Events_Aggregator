@@ -18,9 +18,7 @@ class Place(Base):
 
     __tablename__ = "places"
 
-    id: Mapped[str] = mapped_column(
-        String(36), primary_key=True, default=lambda: str(uuid.uuid4())
-    )
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
     name: Mapped[str] = mapped_column(String(255), nullable=False)
     city: Mapped[str] = mapped_column(String(100), nullable=False)
     address: Mapped[str] = mapped_column(String(500), nullable=False)
@@ -29,9 +27,7 @@ class Place(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=True)
 
     # Relationship
-    events: Mapped[list["Event"]] = relationship(
-        back_populates="place", lazy="selectin"
-    )
+    events: Mapped[list["Event"]] = relationship(back_populates="place", lazy="selectin")
 
     def __repr__(self) -> str:
         return f"<Place(id={self.id}, name={self.name}, city={self.city})>"
@@ -45,9 +41,7 @@ class Event(Base):
     id: Mapped[str] = mapped_column(String(36), primary_key=True)
     name: Mapped[str] = mapped_column(String(255), nullable=False)
     place_id: Mapped[str] = mapped_column(ForeignKey("places.id"), nullable=False)
-    event_time: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), nullable=False
-    )
+    event_time: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     registration_deadline: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True
     )

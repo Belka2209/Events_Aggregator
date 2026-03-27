@@ -10,9 +10,7 @@ from src.services.events_provider_client import SeatsData
 
 
 @pytest.mark.asyncio
-async def test_get_seats(
-    client: AsyncClient, sample_event: Event, mock_provider_client: MagicMock
-):
+async def test_get_seats(client: AsyncClient, sample_event: Event, mock_provider_client: MagicMock):
     """Test get available seats for an event."""
     mock_seats = ["A1", "A2", "B1"]
 

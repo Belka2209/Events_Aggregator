@@ -12,9 +12,7 @@ async def test_trigger_sync(client: AsyncClient):
     # We mock the usecase to avoid background tasks issues in tests
     with patch("src.api.routes.sync.SyncEventsUsecase") as mock_use_case_class:
         mock_instance = mock_use_case_class.return_value
-        mock_instance.execute = AsyncMock(
-            return_value={"created": 1, "updated": 0, "errors": 0}
-        )
+        mock_instance.execute = AsyncMock(return_value={"created": 1, "updated": 0, "errors": 0})
 
         response = await client.post("/api/sync/trigger")
 

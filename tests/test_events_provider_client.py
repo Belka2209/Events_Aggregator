@@ -224,9 +224,7 @@ class TestEventsProviderClient:
             "src.services.events_provider_client.httpx.AsyncClient",
             return_value=context_manager,
         ):
-            result = await client.unregister(
-                event_id="event-uuid-1", ticket_id="ticket-uuid-123"
-            )
+            result = await client.unregister(event_id="event-uuid-1", ticket_id="ticket-uuid-123")
 
         mock_client.request.assert_called_once_with(
             "DELETE",

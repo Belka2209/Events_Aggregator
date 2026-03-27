@@ -80,9 +80,7 @@ async def test_sync_state_repository_create_get_latest(sync_state_repository):
     last_changed = datetime(2023, 5, 1, tzinfo=timezone.utc)
 
     # Test create
-    await sync_state_repository.create(
-        last_changed_at=last_changed, sync_status="success"
-    )
+    await sync_state_repository.create(last_changed_at=last_changed, sync_status="success")
 
     # Test get_latest
     latest = await sync_state_repository.get_latest()

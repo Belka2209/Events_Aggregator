@@ -79,13 +79,9 @@ async def client(
         return mock_provider_client
 
     app.dependency_overrides[get_session] = override_get_session
-    app.dependency_overrides[get_events_provider_client] = (
-        override_get_events_provider_client
-    )
+    app.dependency_overrides[get_events_provider_client] = override_get_events_provider_client
 
-    async with AsyncClient(
-        transport=ASGITransport(app=app), base_url="http://test"
-    ) as ac:
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as ac:
         yield ac
 
     app.dependency_overrides.clear()
