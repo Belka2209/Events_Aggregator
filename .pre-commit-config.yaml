@@ -12,12 +12,12 @@ repos:
 
   # Ruff - линтер и форматтер в одном
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.3.4 # Используйте последнюю версию
+    rev: v0.15.7 # Используйте последнюю версию
     hooks:
       # Линтер (проверяет код)
       - id: ruff
-        args: [--fix, --line-length=79]
+        # args: [--fix, --line-length=79]
 
       # Форматтер (автоматически форматирует)
       - id: ruff-format
-        args: [--line-length=79]
+        # args: [--line-length=79]
