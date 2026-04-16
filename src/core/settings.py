@@ -37,6 +37,22 @@ class Settings(BaseSettings):
     events_provider_base_url: str = "http://student-system-events-provider-web.student-system-events-provider.svc:8000"
     events_provider_api_key: str = ""
 
+    # Capashino Notification Service
+    capashino_base_url: str = (
+        "http://student-system-capashino-web.student-system-capashino.svc:8000"
+    )
+    capashino_api_key: str = ""
+
+    # GlitchTip (Sentry)
+    glitchtip_dsn: str = ""
+
+    # Outbox worker settings
+    outbox_poll_interval_seconds: int = 5
+    outbox_max_retries: int = 3
+
+    # Idempotency key settings
+    idempotency_key_ttl_days: int = 7
+
     # Sync settings
     sync_interval_hours: int = 24  # Синхронизация раз в день
 
@@ -59,6 +75,11 @@ class Settings(BaseSettings):
     def events_provider_unregister_url(self) -> str:
         """Get unregister endpoint URL template."""
         return f"{self.events_provider_base_url}/api/events/{{event_id}}/unregister/"
+
+    @property
+    def capashino_notifications_url(self) -> str:
+        """Get Capashino notifications endpoint URL."""
+        return f"{self.capashino_base_url}/api/notifications"
 
 
 settings = Settings()

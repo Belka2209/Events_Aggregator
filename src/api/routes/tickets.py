@@ -9,6 +9,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from src.core.database import get_session
 from src.core.dependencies import get_events_provider_client
 from src.repositories.event_repository import SQLAlchemyEventRepository
+from src.repositories.idempotency_repository import SQLAlchemyIdempotencyRepository
+from src.repositories.outbox_repository import SQLAlchemyOutboxRepository
 from src.repositories.ticket_repository import SQLAlchemyTicketRepository
 from src.schemas.api_schemas import (
     TicketCreateRequest,
@@ -41,17 +43,22 @@ async def create_ticket(
     """
     event_repo = SQLAlchemyEventRepository(session)
     ticket_repo = SQLAlchemyTicketRepository(session)
-    usecase = CreateTicketUsecase(event_repo, ticket_repo, client)
+    outbox_repo = SQLAlchemyOutboxRepository(session)
+    idempotency_repo = SQLAlchemyIdempotencyRepository(session)
+    usecase = CreateTicketUsecase(
+        event_repo, ticket_repo, outbox_repo, idempotency_repo, client
+    )
 
-    ticket = await usecase.execute(
+    result = await usecase.execute(
         event_id=request.event_id,
         first_name=request.first_name,
         last_name=request.last_name,
         email=request.email,
         seat=request.seat,
+        idempotency_key=request.idempotency_key,
     )
 
-    return TicketCreateResponse(ticket_id=ticket.ticket_id)
+    return TicketCreateResponse(ticket_id=result["ticket_id"])
 
 
 @router.delete("/tickets/{ticket_id}", response_model=TicketDeleteResponse)

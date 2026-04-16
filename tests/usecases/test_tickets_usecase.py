@@ -17,20 +17,29 @@ from src.usecases.delete_ticket import DeleteTicketUsecase
 
 @pytest.mark.asyncio
 async def test_create_ticket_usecase(
-    sample_event: Event, ticket_repository, event_repository
+    sample_event: Event, ticket_repository, event_repository, db_session
 ):
     """Test CreateTicketUsecase."""
+    from src.repositories.idempotency_repository import (
+        SQLAlchemyIdempotencyRepository,
+    )
+    from src.repositories.outbox_repository import SQLAlchemyOutboxRepository
+
     mock_client = MagicMock()
     mock_client.register = AsyncMock(
         return_value=RegistrationData(ticket_id="test-ticket-id")
     )
 
-    # Note: CreateTicketUsecase checks event status.
     sample_event.status = "published"
+
+    outbox_repo = SQLAlchemyOutboxRepository(db_session)
+    idempotency_repo = SQLAlchemyIdempotencyRepository(db_session)
 
     usecase = CreateTicketUsecase(
         event_repo=event_repository,
         ticket_repo=ticket_repository,
+        outbox_repo=outbox_repo,
+        idempotency_repo=idempotency_repo,
         client=mock_client,
     )
 
@@ -42,7 +51,7 @@ async def test_create_ticket_usecase(
         seat="A1",
     )
 
-    assert result.ticket_id == "test-ticket-id"
+    assert result["ticket_id"] == "test-ticket-id"
     mock_client.register.assert_called_once()
 
 
