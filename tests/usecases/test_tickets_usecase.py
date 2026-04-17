@@ -11,6 +11,7 @@ from src.models.ticket import Ticket
 from src.services.events_provider_client import (
     ProviderError,
     RegistrationData,
+    SeatsData,
     UnregisterData,
 )
 from src.usecases.create_ticket import CreateTicketUsecase
@@ -153,3 +154,49 @@ async def test_create_ticket_usecase_provider_unavailable(
         )
 
     assert exc_info.value.status_code == 503
+
+
+@pytest.mark.asyncio
+async def test_create_ticket_usecase_retries_with_fallback_seat(
+    sample_event: Event, ticket_repository, event_repository, db_session
+):
+    """Test CreateTicketUsecase retries with next available seat."""
+    from src.repositories.idempotency_repository import SQLAlchemyIdempotencyRepository
+    from src.repositories.outbox_repository import SQLAlchemyOutboxRepository
+
+    mock_client = MagicMock()
+    mock_client.register = AsyncMock(
+        side_effect=[
+            ProviderError(status_code=400, detail="Seat is unavailable"),
+            RegistrationData(ticket_id="test-ticket-id-fallback"),
+        ]
+    )
+    mock_client.get_seats = AsyncMock(return_value=SeatsData(seats=["A2", "A3"]))
+
+    sample_event.status = "published"
+
+    outbox_repo = SQLAlchemyOutboxRepository(db_session)
+    idempotency_repo = SQLAlchemyIdempotencyRepository(db_session)
+
+    usecase = CreateTicketUsecase(
+        event_repo=event_repository,
+        ticket_repo=ticket_repository,
+        outbox_repo=outbox_repo,
+        idempotency_repo=idempotency_repo,
+        client=mock_client,
+    )
+
+    result = await usecase.execute(
+        event_id=sample_event.id,
+        first_name="John",
+        last_name="Doe",
+        email="john@example.com",
+        seat="A1",
+    )
+
+    assert result["ticket_id"] == "test-ticket-id-fallback"
+    assert mock_client.register.await_count == 2
+    first_call = mock_client.register.await_args_list[0].kwargs
+    second_call = mock_client.register.await_args_list[1].kwargs
+    assert first_call["seat"] == "A1"
+    assert second_call["seat"] == "A2"

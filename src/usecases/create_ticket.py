@@ -106,28 +106,72 @@ class CreateTicketUsecase:
                 status_code=400, detail="Registration deadline has passed"
             )
 
-        try:
-            registration = await self._client.register(
-                event_id=event_id,
-                first_name=first_name,
-                last_name=last_name,
-                email=email,
-                seat=seat,
-            )
-        except ProviderError as e:
-            if e.status_code == 400:
-                raise HTTPException(status_code=400, detail="Seat is not available")
-            if e.status_code == 404:
-                raise HTTPException(
-                    status_code=404, detail="Event not found in provider"
+        registration = None
+        booked_seat = seat
+        candidate_seats: list[str] = [seat]
+        tried_seats: set[str] = set()
+
+        while candidate_seats:
+            current_seat = candidate_seats.pop(0)
+            tried_seats.add(current_seat)
+            try:
+                registration = await self._client.register(
+                    event_id=event_id,
+                    first_name=first_name,
+                    last_name=last_name,
+                    email=email,
+                    seat=current_seat,
                 )
-            if e.status_code == 503:
-                raise HTTPException(
-                    status_code=503,
-                    detail="Events Provider is unavailable",
-                )
-            logger.error("Provider error during registration: %s", e.detail)
-            raise HTTPException(status_code=500, detail="Provider error")
+                booked_seat = current_seat
+                break
+            except ProviderError as e:
+                if e.status_code == 400:
+                    # A seat may become unavailable between /seats and /tickets calls.
+                    # Try the next актуальное место from provider before returning 400.
+                    try:
+                        seats_data = await self._client.get_seats(event_id)
+                    except ProviderError:
+                        raise HTTPException(
+                            status_code=400,
+                            detail="Seat is not available",
+                        ) from e
+
+                    fallback_seat = next(
+                        (
+                            available_seat
+                            for available_seat in seats_data.seats
+                            if available_seat not in tried_seats
+                        ),
+                        None,
+                    )
+                    if fallback_seat:
+                        logger.warning(
+                            "Seat %s unavailable for event %s, retrying with %s",
+                            current_seat,
+                            event_id,
+                            fallback_seat,
+                        )
+                        candidate_seats.append(fallback_seat)
+                        continue
+
+                    raise HTTPException(
+                        status_code=400,
+                        detail="Seat is not available",
+                    ) from e
+                if e.status_code == 404:
+                    raise HTTPException(
+                        status_code=404, detail="Event not found in provider"
+                    ) from e
+                if e.status_code == 503:
+                    raise HTTPException(
+                        status_code=503,
+                        detail="Events Provider is unavailable",
+                    ) from e
+                logger.error("Provider error during registration: %s", e.detail)
+                raise HTTPException(status_code=500, detail="Provider error") from e
+
+        if registration is None:
+            raise HTTPException(status_code=400, detail="Seat is not available")
 
         ticket = Ticket(
             ticket_id=registration.ticket_id,
@@ -135,7 +179,7 @@ class CreateTicketUsecase:
             first_name=first_name,
             last_name=last_name,
             email=email,
-            seat=seat,
+            seat=booked_seat,
             created_at=datetime.now(timezone.utc),
         )
         await self._ticket_repo.create(ticket)
@@ -149,7 +193,7 @@ class CreateTicketUsecase:
                 "first_name": first_name,
                 "last_name": last_name,
                 "email": email,
-                "seat": seat,
+                "seat": booked_seat,
                 "message": f"Вы успешно зарегистрированы на мероприятие '{event.name}'",
                 "idempotency_key": f"ticket-{ticket.ticket_id}",
             },
