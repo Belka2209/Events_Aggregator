@@ -27,6 +27,10 @@ class OutboxRepository(Protocol):
         """Mark record as failed."""
         ...
 
+    async def mark_retry(self, outbox: Outbox, error_message: str) -> None:
+        """Increment retry counter and keep record pending."""
+        ...
+
 
 class SQLAlchemyOutboxRepository:
     """SQLAlchemy implementation of OutboxRepository."""
@@ -90,5 +94,17 @@ class SQLAlchemyOutboxRepository:
         """
         outbox.status = OutboxStatus.FAILED.value
         outbox.error_message = error_message
-        outbox.retry_count = str(int(outbox.retry_count) + 1)
+        outbox.retry_count += 1
+        await self._session.flush()
+
+    async def mark_retry(self, outbox: Outbox, error_message: str) -> None:
+        """Increment retry counter and keep status pending.
+
+        Args:
+            outbox: Outbox record to retry later.
+            error_message: Last error message.
+        """
+        outbox.status = OutboxStatus.PENDING.value
+        outbox.error_message = error_message
+        outbox.retry_count += 1
         await self._session.flush()

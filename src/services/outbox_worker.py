@@ -7,7 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.core.database import async_session_maker
 from src.core.settings import settings
-from src.models.outbox import OutboxEventType, OutboxStatus
+from src.models.outbox import OutboxEventType
 from src.repositories.outbox_repository import SQLAlchemyOutboxRepository
 from src.services.capashino_client import CapashinoClient, CapashinoError
 
@@ -85,15 +85,31 @@ class OutboxWorker:
                 await session.commit()
         except CapashinoError as e:
             logger.error("Capashino error for record %s: %s", record.id, e.message)
-            retry_count = int(record.retry_count)
-            if retry_count >= self._max_retries:
+            next_retry_count = record.retry_count + 1
+            if next_retry_count >= self._max_retries:
                 await repo.mark_failed(record, f"Max retries exceeded: {e.message}")
             else:
-                record.status = OutboxStatus.PENDING.value
+                await repo.mark_retry(record, e.message)
+                logger.warning(
+                    "Outbox record %s will be retried (%s/%s)",
+                    record.id,
+                    next_retry_count,
+                    self._max_retries,
+                )
             await session.commit()
         except Exception as e:
             logger.error("Error processing record %s: %s", record.id, e)
-            await repo.mark_failed(record, str(e))
+            next_retry_count = record.retry_count + 1
+            if next_retry_count >= self._max_retries:
+                await repo.mark_failed(record, f"Max retries exceeded: {e}")
+            else:
+                await repo.mark_retry(record, str(e))
+                logger.warning(
+                    "Outbox record %s will be retried (%s/%s)",
+                    record.id,
+                    next_retry_count,
+                    self._max_retries,
+                )
             await session.commit()
 
     async def _handle_ticket_created(
