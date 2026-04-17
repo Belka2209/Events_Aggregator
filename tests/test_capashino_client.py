@@ -91,8 +91,10 @@ class TestCapashinoClient:
     async def test_create_notification_400_error(self):
         """Test notification creation with 400 error."""
         with patch("httpx.AsyncClient") as mock_client:
-            mock_response = AsyncMock()
+            mock_response = MagicMock()
             mock_response.status_code = 400
+            mock_response.json.return_value = {"detail": "Bad request"}
+            mock_response.text = "Bad request"
             mock_client.return_value.__aenter__.return_value.post = AsyncMock(
                 return_value=mock_response
             )
@@ -113,8 +115,10 @@ class TestCapashinoClient:
     async def test_create_notification_401_error(self):
         """Test notification creation with 401 error."""
         with patch("httpx.AsyncClient") as mock_client:
-            mock_response = AsyncMock()
+            mock_response = MagicMock()
             mock_response.status_code = 401
+            mock_response.json.return_value = {"detail": "Unauthorized"}
+            mock_response.text = "Unauthorized"
             mock_client.return_value.__aenter__.return_value.post = AsyncMock(
                 return_value=mock_response
             )
@@ -135,8 +139,10 @@ class TestCapashinoClient:
     async def test_create_notification_server_error(self):
         """Test notification creation with 500 error."""
         with patch("httpx.AsyncClient") as mock_client:
-            mock_response = AsyncMock()
+            mock_response = MagicMock()
             mock_response.status_code = 500
+            mock_response.json.return_value = {"detail": "Server error"}
+            mock_response.text = "Server error"
             mock_client.return_value.__aenter__.return_value.post = AsyncMock(
                 return_value=mock_response
             )
@@ -172,3 +178,33 @@ class TestCapashinoClient:
                     message="Test message",
                     reference_id="ticket-789",
                 )
+
+    @pytest.mark.asyncio
+    async def test_create_notification_adds_default_idempotency_key(self):
+        """Test client always sends idempotency key to Capashino."""
+        client = CapashinoClient()
+        client._base_url = "http://test"
+        client._api_key = "test-key"
+        client._timeout = 30.0
+
+        response = MagicMock()
+        response.status_code = 201
+        response.json.return_value = {
+            "id": "notif-123",
+            "user_id": "user-456",
+            "message": "Test message",
+            "reference_id": "ticket-789",
+            "created_at": "2024-01-01T00:00:00Z",
+            "idempotency_key": "capashino-ticket-789",
+        }
+
+        post_mock = AsyncMock(return_value=response)
+        with patch("httpx.AsyncClient") as mock_client:
+            mock_client.return_value.__aenter__.return_value.post = post_mock
+            await client.create_notification(
+                message="Test message",
+                reference_id="ticket-789",
+            )
+
+        called_payload = post_mock.call_args.kwargs["json"]
+        assert called_payload["idempotency_key"] == "capashino-ticket-789"

@@ -38,9 +38,20 @@ class CapashinoClient:
 
     def __init__(self) -> None:
         """Initialize client."""
-        self._base_url = settings.capashino_base_url
+        self._base_url = settings.capashino_base_url.rstrip("/")
         self._api_key = settings.capashino_api_key
         self._timeout = 30.0
+
+    @staticmethod
+    def _extract_error_detail(response: httpx.Response) -> str:
+        """Extract readable error details from response body."""
+        try:
+            data = response.json()
+            if isinstance(data, dict):
+                return str(data.get("detail", data))
+            return str(data)
+        except ValueError:
+            return response.text or "Unknown Capashino error"
 
     async def create_notification(
         self,
@@ -71,11 +82,15 @@ class CapashinoClient:
             "reference_id": reference_id,
         }
 
-        if idempotency_key:
-            payload["idempotency_key"] = idempotency_key
+        # Capashino contract uses idempotency key for deduplication,
+        # so we always send one even if caller omitted it.
+        payload["idempotency_key"] = idempotency_key or f"capashino-{reference_id}"
 
         try:
-            async with httpx.AsyncClient(timeout=self._timeout) as client:
+            async with httpx.AsyncClient(
+                timeout=self._timeout,
+                follow_redirects=True,
+            ) as client:
                 response = await client.post(
                     f"{self._base_url}/api/notifications",
                     json=payload,
@@ -97,9 +112,9 @@ class CapashinoClient:
             )
 
         if response.status_code == 400:
-            raise CapashinoError("Bad request: missing reference_id", 400)
+            raise CapashinoError(self._extract_error_detail(response), 400)
         if response.status_code == 401:
-            raise CapashinoError("Unauthorized: invalid API key", 401)
+            raise CapashinoError(self._extract_error_detail(response), 401)
         if response.status_code == 409:
             data = response.json()
             return CapashinoNotificationResponse(
@@ -111,9 +126,12 @@ class CapashinoClient:
                 idempotency_key=data.get("idempotency_key"),
             )
         if response.status_code == 422:
-            raise CapashinoError("Unprocessable entity: empty message", 422)
+            raise CapashinoError(self._extract_error_detail(response), 422)
         if response.status_code >= 500:
-            raise CapashinoError("Server error", response.status_code)
+            raise CapashinoError(
+                self._extract_error_detail(response),
+                response.status_code,
+            )
 
         raise CapashinoError(
             f"Unexpected error: {response.status_code}", response.status_code

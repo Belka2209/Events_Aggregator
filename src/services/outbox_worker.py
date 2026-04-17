@@ -85,6 +85,14 @@ class OutboxWorker:
                 await session.commit()
         except CapashinoError as e:
             logger.error("Capashino error for record %s: %s", record.id, e.message)
+            # Do not retry permanent client-side errors.
+            if e.status_code in {400, 401, 422}:
+                await repo.mark_failed(
+                    record, f"Non-retryable Capashino error: {e.message}"
+                )
+                await session.commit()
+                return
+
             next_retry_count = record.retry_count + 1
             if next_retry_count >= self._max_retries:
                 await repo.mark_failed(record, f"Max retries exceeded: {e.message}")
