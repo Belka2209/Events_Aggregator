@@ -25,6 +25,16 @@ class OutboxWorker:
         self._poll_interval = settings.outbox_poll_interval_seconds
         self._max_retries = settings.outbox_max_retries
 
+    @staticmethod
+    def _safe_retry_count(value: object) -> int:
+        """Safely convert retry counter value from DB to int."""
+        if isinstance(value, int):
+            return value
+        try:
+            return int(value)  # Handles legacy string values.
+        except (TypeError, ValueError):
+            return 0
+
     async def start(self) -> None:
         """Start the worker."""
         if self._running:
@@ -93,7 +103,7 @@ class OutboxWorker:
                 await session.commit()
                 return
 
-            next_retry_count = record.retry_count + 1
+            next_retry_count = self._safe_retry_count(record.retry_count) + 1
             if next_retry_count >= self._max_retries:
                 await repo.mark_failed(record, f"Max retries exceeded: {e.message}")
             else:
@@ -107,7 +117,7 @@ class OutboxWorker:
             await session.commit()
         except Exception as e:
             logger.error("Error processing record %s: %s", record.id, e)
-            next_retry_count = record.retry_count + 1
+            next_retry_count = self._safe_retry_count(record.retry_count) + 1
             if next_retry_count >= self._max_retries:
                 await repo.mark_failed(record, f"Max retries exceeded: {e}")
             else:

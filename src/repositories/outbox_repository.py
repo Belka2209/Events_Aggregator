@@ -43,6 +43,16 @@ class SQLAlchemyOutboxRepository:
         """
         self._session = session
 
+    @staticmethod
+    def _safe_retry_count(value: object) -> int:
+        """Safely convert retry counter value from DB to int."""
+        if isinstance(value, int):
+            return value
+        try:
+            return int(value)  # Handles legacy string values.
+        except (TypeError, ValueError):
+            return 0
+
     async def create(self, outbox: Outbox) -> Outbox:
         """Create outbox record.
 
@@ -94,7 +104,7 @@ class SQLAlchemyOutboxRepository:
         """
         outbox.status = OutboxStatus.FAILED.value
         outbox.error_message = error_message
-        outbox.retry_count += 1
+        outbox.retry_count = self._safe_retry_count(outbox.retry_count) + 1
         await self._session.flush()
 
     async def mark_retry(self, outbox: Outbox, error_message: str) -> None:
@@ -106,5 +116,5 @@ class SQLAlchemyOutboxRepository:
         """
         outbox.status = OutboxStatus.PENDING.value
         outbox.error_message = error_message
-        outbox.retry_count += 1
+        outbox.retry_count = self._safe_retry_count(outbox.retry_count) + 1
         await self._session.flush()
