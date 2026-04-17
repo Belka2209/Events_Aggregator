@@ -87,6 +87,25 @@ class EventsProviderClient:
         """Get request headers."""
         return {"x-api-key": self._api_key, "Content-Type": "application/json"}
 
+    @staticmethod
+    def _extract_error_detail(response: httpx.Response) -> str:
+        """Extract human-readable error details from provider response."""
+        try:
+            data = response.json()
+            if isinstance(data, dict):
+                return str(data.get("detail", data))
+            return str(data)
+        except Exception:
+            return response.text or "Unknown provider error"
+
+    def _raise_provider_error(self, response: httpx.Response) -> None:
+        """Raise ProviderError for non-success responses."""
+        if response.is_error:
+            raise ProviderError(
+                status_code=response.status_code,
+                detail=self._extract_error_detail(response),
+            )
+
     async def events(
         self, changed_at: str, cursor: str | None = None
     ) -> tuple[list[EventData], str | None]:
@@ -105,14 +124,21 @@ class EventsProviderClient:
             params["cursor"] = cursor
 
         logger.debug("Requesting events: url=%s, params=%s", url, params)
-        async with httpx.AsyncClient(timeout=self._timeout) as client:
-            response = await client.get(url, params=params, headers=self._get_headers())
-            response.raise_for_status()
-            data = response.json()
-            logger.debug("Response status: %s", response.status_code)
+        try:
+            async with httpx.AsyncClient(timeout=self._timeout) as client:
+                response = await client.get(
+                    url,
+                    params=params,
+                    headers=self._get_headers(),
+                )
+        except httpx.RequestError as e:
+            raise ProviderError(status_code=503, detail=str(e)) from e
 
-            logger.debug("Response has %d results", len(data.get("results", [])))
-            logger.debug("Next URL: %s", data.get("next"))
+        self._raise_provider_error(response)
+        data = response.json()
+        logger.debug("Response status: %s", response.status_code)
+        logger.debug("Response has %d results", len(data.get("results", [])))
+        logger.debug("Next URL: %s", data.get("next"))
 
         events = []
         for event_data in data["results"]:
@@ -153,10 +179,14 @@ class EventsProviderClient:
         """
         url = f"{self._base_url}/api/events/{event_id}/seats/"
 
-        async with httpx.AsyncClient(timeout=self._timeout) as client:
-            response = await client.get(url, headers=self._get_headers())
-            response.raise_for_status()
-            data = response.json()
+        try:
+            async with httpx.AsyncClient(timeout=self._timeout) as client:
+                response = await client.get(url, headers=self._get_headers())
+        except httpx.RequestError as e:
+            raise ProviderError(status_code=503, detail=str(e)) from e
+
+        self._raise_provider_error(response)
+        data = response.json()
 
         return SeatsData(seats=data["seats"])
 
@@ -188,10 +218,18 @@ class EventsProviderClient:
             "seat": seat,
         }
 
-        async with httpx.AsyncClient(timeout=self._timeout) as client:
-            response = await client.post(url, json=payload, headers=self._get_headers())
-            response.raise_for_status()
-            data = response.json()
+        try:
+            async with httpx.AsyncClient(timeout=self._timeout) as client:
+                response = await client.post(
+                    url,
+                    json=payload,
+                    headers=self._get_headers(),
+                )
+        except httpx.RequestError as e:
+            raise ProviderError(status_code=503, detail=str(e)) from e
+
+        self._raise_provider_error(response)
+        data = response.json()
 
         return RegistrationData(ticket_id=data["ticket_id"])
 
@@ -208,18 +246,18 @@ class EventsProviderClient:
         url = f"{self._base_url}/api/events/{event_id}/unregister/"
         payload = {"ticket_id": ticket_id}
 
-        async with httpx.AsyncClient(timeout=self._timeout) as client:
-            response = await client.request(
-                "DELETE", url, json=payload, headers=self._get_headers()
-            )
-            if response.is_error:
-                detail = response.text
-                try:
-                    detail = response.json().get("detail", detail)
-                except Exception:
-                    pass
-                raise ProviderError(status_code=response.status_code, detail=detail)
+        try:
+            async with httpx.AsyncClient(timeout=self._timeout) as client:
+                response = await client.request(
+                    "DELETE",
+                    url,
+                    json=payload,
+                    headers=self._get_headers(),
+                )
+        except httpx.RequestError as e:
+            raise ProviderError(status_code=503, detail=str(e)) from e
 
-            data = response.json()
+        self._raise_provider_error(response)
+        data = response.json()
 
         return UnregisterData(success=data["success"])

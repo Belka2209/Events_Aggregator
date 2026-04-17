@@ -121,6 +121,11 @@ class CreateTicketUsecase:
                 raise HTTPException(
                     status_code=404, detail="Event not found in provider"
                 )
+            if e.status_code == 503:
+                raise HTTPException(
+                    status_code=503,
+                    detail="Events Provider is unavailable",
+                )
             logger.error("Provider error during registration: %s", e.detail)
             raise HTTPException(status_code=500, detail="Provider error")
 

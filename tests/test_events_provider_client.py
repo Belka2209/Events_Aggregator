@@ -2,9 +2,10 @@
 
 from unittest.mock import AsyncMock, MagicMock, patch
 
+import httpx
 import pytest
 
-from src.services.events_provider_client import EventsProviderClient
+from src.services.events_provider_client import EventsProviderClient, ProviderError
 
 
 class AsyncContextManagerMock:
@@ -84,6 +85,7 @@ class TestEventsProviderClient:
         mock_response = MagicMock()
         mock_response.json.return_value = mock_data
         mock_response.raise_for_status.return_value = None
+        mock_response.is_error = False
 
         # Create mock client
         mock_client = MagicMock()
@@ -139,6 +141,7 @@ class TestEventsProviderClient:
         mock_response = MagicMock()
         mock_response.json.return_value = mock_data
         mock_response.raise_for_status.return_value = None
+        mock_response.is_error = False
 
         mock_client = MagicMock()
         mock_client.get = AsyncMock(return_value=mock_response)
@@ -163,6 +166,7 @@ class TestEventsProviderClient:
         mock_response = MagicMock()
         mock_response.json.return_value = mock_data
         mock_response.raise_for_status.return_value = None
+        mock_response.is_error = False
 
         mock_client = MagicMock()
         mock_client.get = AsyncMock(return_value=mock_response)
@@ -185,6 +189,7 @@ class TestEventsProviderClient:
         mock_response = MagicMock()
         mock_response.json.return_value = mock_data
         mock_response.raise_for_status.return_value = None
+        mock_response.is_error = False
 
         mock_client = MagicMock()
         mock_client.post = AsyncMock(return_value=mock_response)
@@ -235,3 +240,50 @@ class TestEventsProviderClient:
             headers=client._get_headers(),
         )
         assert result.success is True
+
+    @pytest.mark.asyncio
+    async def test_register_provider_error(self, client: EventsProviderClient):
+        """Test provider http error is wrapped into ProviderError."""
+        mock_response = MagicMock()
+        mock_response.is_error = True
+        mock_response.status_code = 400
+        mock_response.json.return_value = {"detail": "Seat is unavailable"}
+        mock_response.text = "Seat is unavailable"
+
+        mock_client = MagicMock()
+        mock_client.post = AsyncMock(return_value=mock_response)
+        context_manager = AsyncContextManagerMock(mock_client)
+
+        with (
+            patch(
+                "src.services.events_provider_client.httpx.AsyncClient",
+                return_value=context_manager,
+            ),
+            pytest.raises(ProviderError) as exc_info,
+        ):
+            await client.register(
+                event_id="event-uuid-1",
+                first_name="Ivan",
+                last_name="Ivanov",
+                email="ivan@example.com",
+                seat="A15",
+            )
+
+        assert exc_info.value.status_code == 400
+        assert "Seat is unavailable" in exc_info.value.detail
+
+    @pytest.mark.asyncio
+    async def test_events_request_error_wrapped(self, client: EventsProviderClient):
+        """Test network errors are wrapped into ProviderError with 503."""
+        mock_client = MagicMock()
+        mock_client.get = AsyncMock(side_effect=httpx.RequestError("network down"))
+        context_manager = AsyncContextManagerMock(mock_client)
+
+        with patch(
+            "src.services.events_provider_client.httpx.AsyncClient",
+            return_value=context_manager,
+        ):
+            with pytest.raises(ProviderError) as exc_info:
+                await client.events(changed_at="2000-01-01")
+
+        assert exc_info.value.status_code == 503

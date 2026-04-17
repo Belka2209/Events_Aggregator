@@ -48,6 +48,16 @@ class DeleteTicketUsecase:
                 ticket_id,
                 e.detail,
             )
+            if e.status_code == 404:
+                raise HTTPException(
+                    status_code=404,
+                    detail="Ticket not found in provider",
+                )
+            if e.status_code == 503:
+                raise HTTPException(
+                    status_code=503,
+                    detail="Events Provider is unavailable",
+                )
             raise HTTPException(
                 status_code=500, detail="Failed to unregister from provider"
             )
