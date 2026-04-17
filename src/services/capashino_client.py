@@ -42,6 +42,17 @@ class CapashinoClient:
         self._api_key = settings.capashino_api_key
         self._timeout = 30.0
 
+    def _notifications_url(self) -> str:
+        """Build notifications endpoint URL from base URL.
+
+        Supports both variants:
+        - CAPASHINO_BASE_URL=https://host
+        - CAPASHINO_BASE_URL=https://host/api
+        """
+        if self._base_url.endswith("/api"):
+            return f"{self._base_url}/notifications"
+        return f"{self._base_url}/api/notifications"
+
     @staticmethod
     def _extract_error_detail(response: httpx.Response) -> str:
         """Extract readable error details from response body."""
@@ -92,7 +103,7 @@ class CapashinoClient:
                 follow_redirects=True,
             ) as client:
                 response = await client.post(
-                    f"{self._base_url}/api/notifications",
+                    self._notifications_url(),
                     json=payload,
                     headers=headers,
                 )

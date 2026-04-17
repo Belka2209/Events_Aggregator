@@ -208,3 +208,21 @@ class TestCapashinoClient:
 
         called_payload = post_mock.call_args.kwargs["json"]
         assert called_payload["idempotency_key"] == "capashino-ticket-789"
+
+    def test_notifications_url_with_plain_base(self):
+        """Test endpoint building when base URL has no /api suffix."""
+        client = CapashinoClient()
+        client._base_url = "https://capashino.dev-2.python-labs.ru"
+        assert (
+            client._notifications_url()
+            == "https://capashino.dev-2.python-labs.ru/api/notifications"
+        )
+
+    def test_notifications_url_with_api_suffix(self):
+        """Test endpoint building when base URL already ends with /api."""
+        client = CapashinoClient()
+        client._base_url = "https://capashino.dev-2.python-labs.ru/api"
+        assert (
+            client._notifications_url()
+            == "https://capashino.dev-2.python-labs.ru/api/notifications"
+        )
