@@ -1,7 +1,6 @@
 """Seats endpoints."""
 
 import logging
-from datetime import datetime, timedelta
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -15,10 +14,6 @@ from src.services.events_provider_client import EventsProviderClient
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
-
-# Simple in-memory cache for seats
-_seats_cache: dict[str, tuple[list[str], datetime]] = {}
-_CACHE_TTL_SECONDS = 30
 
 
 @router.get("/events/{event_id}/seats", response_model=SeatsResponse)
@@ -37,14 +32,6 @@ async def get_seats(
     Returns:
         List of available seats.
     """
-    # Check cache
-    now = datetime.now()
-    if event_id in _seats_cache:
-        cached_seats, cached_at = _seats_cache[event_id]
-        if now - cached_at < timedelta(seconds=_CACHE_TTL_SECONDS):
-            logger.debug("Returning cached seats for event %s", event_id)
-            return SeatsResponse(event_id=event_id, available_seats=cached_seats)
-
     # Verify event exists in local DB
     event_repo = SQLAlchemyEventRepository(session)
     event = await event_repo.get(event_id)
@@ -58,8 +45,5 @@ async def get_seats(
     except Exception as e:
         logger.error("Error getting seats for event %s: %s", event_id, e)
         raise HTTPException(status_code=500, detail="Failed to get seats from provider")
-
-    # Update cache
-    _seats_cache[event_id] = (seats_data.seats, now)
 
     return SeatsResponse(event_id=event_id, available_seats=seats_data.seats)
