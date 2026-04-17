@@ -7,7 +7,7 @@ import pytest
 from httpx import AsyncClient
 
 from src.models.event import Event
-from src.services.events_provider_client import RegistrationData
+from src.services.events_provider_client import ProviderError, RegistrationData
 
 
 @pytest.mark.asyncio
@@ -90,3 +90,63 @@ async def test_unregister_ticket(
     mock_provider_client.unregister.assert_called_once_with(
         event_id=sample_event.id, ticket_id=ticket_id
     )
+
+
+@pytest.mark.asyncio
+async def test_register_ticket_provider_unavailable(
+    client: AsyncClient, sample_event: Event, mock_provider_client: MagicMock
+):
+    """Test register ticket returns 503 when provider is unavailable."""
+    registration_payload = {
+        "event_id": sample_event.id,
+        "first_name": "John",
+        "last_name": "Doe",
+        "email": "john@example.com",
+        "seat": "A1",
+    }
+    sample_event.status = "published"
+
+    mock_provider_client.register = AsyncMock(
+        side_effect=ProviderError(status_code=503, detail="provider unavailable")
+    )
+
+    response = await client.post("/api/tickets", json=registration_payload)
+
+    assert response.status_code == 503
+    assert response.json()["detail"] == "Events Provider is unavailable"
+
+
+@pytest.mark.asyncio
+async def test_unregister_ticket_provider_unavailable(
+    client: AsyncClient,
+    sample_event: Event,
+    db_session,
+    mock_provider_client: MagicMock,
+):
+    """Test unregister ticket returns 503 when provider is unavailable."""
+    ticket_id = str(uuid.uuid4())
+
+    from datetime import datetime, timezone
+
+    from src.models.ticket import Ticket
+
+    ticket = Ticket(
+        ticket_id=ticket_id,
+        event_id=sample_event.id,
+        first_name="John",
+        last_name="Doe",
+        email="john@example.com",
+        seat="A1",
+        created_at=datetime.now(timezone.utc),
+    )
+    db_session.add(ticket)
+    await db_session.flush()
+
+    mock_provider_client.unregister = AsyncMock(
+        side_effect=ProviderError(status_code=503, detail="provider unavailable")
+    )
+
+    response = await client.delete(f"/api/tickets/{ticket_id}")
+
+    assert response.status_code == 503
+    assert response.json()["detail"] == "Events Provider is unavailable"

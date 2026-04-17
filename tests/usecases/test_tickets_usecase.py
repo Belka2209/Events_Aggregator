@@ -4,10 +4,12 @@ from datetime import datetime, timezone
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
+from fastapi import HTTPException
 
 from src.models.event import Event
 from src.models.ticket import Ticket
 from src.services.events_provider_client import (
+    ProviderError,
     RegistrationData,
     UnregisterData,
 )
@@ -84,3 +86,70 @@ async def test_delete_ticket_usecase(sample_event: Event, ticket_repository):
     # Verify ticket is deleted from repo
     deleted_ticket = await ticket_repository.get_by_ticket_id("test-ticket-id")
     assert deleted_ticket is None
+
+
+@pytest.mark.asyncio
+async def test_delete_ticket_usecase_provider_unavailable(
+    sample_event: Event, ticket_repository
+):
+    """Test DeleteTicketUsecase returns 503 when provider is unavailable."""
+    mock_client = MagicMock()
+    mock_client.unregister = AsyncMock(
+        side_effect=ProviderError(status_code=503, detail="provider unavailable")
+    )
+
+    ticket = Ticket(
+        ticket_id="test-ticket-id-unavailable",
+        event_id=sample_event.id,
+        first_name="John",
+        last_name="Doe",
+        email="john@example.com",
+        seat="A1",
+        created_at=datetime.now(timezone.utc),
+    )
+    await ticket_repository.create(ticket)
+
+    usecase = DeleteTicketUsecase(ticket_repo=ticket_repository, client=mock_client)
+
+    with pytest.raises(HTTPException) as exc_info:
+        await usecase.execute(ticket_id=ticket.ticket_id)
+
+    assert exc_info.value.status_code == 503
+
+
+@pytest.mark.asyncio
+async def test_create_ticket_usecase_provider_unavailable(
+    sample_event: Event, ticket_repository, event_repository, db_session
+):
+    """Test CreateTicketUsecase returns 503 when provider is unavailable."""
+    from src.repositories.idempotency_repository import SQLAlchemyIdempotencyRepository
+    from src.repositories.outbox_repository import SQLAlchemyOutboxRepository
+
+    mock_client = MagicMock()
+    mock_client.register = AsyncMock(
+        side_effect=ProviderError(status_code=503, detail="provider unavailable")
+    )
+
+    sample_event.status = "published"
+
+    outbox_repo = SQLAlchemyOutboxRepository(db_session)
+    idempotency_repo = SQLAlchemyIdempotencyRepository(db_session)
+
+    usecase = CreateTicketUsecase(
+        event_repo=event_repository,
+        ticket_repo=ticket_repository,
+        outbox_repo=outbox_repo,
+        idempotency_repo=idempotency_repo,
+        client=mock_client,
+    )
+
+    with pytest.raises(HTTPException) as exc_info:
+        await usecase.execute(
+            event_id=sample_event.id,
+            first_name="John",
+            last_name="Doe",
+            email="john@example.com",
+            seat="A1",
+        )
+
+    assert exc_info.value.status_code == 503

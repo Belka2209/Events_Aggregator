@@ -159,6 +159,28 @@ async def test_outbox_mark_failed(db_session):
 
     assert outbox.status == OutboxStatus.FAILED.value
     assert outbox.error_message == "Error occurred"
+    assert outbox.retry_count == 1
+
+
+@pytest.mark.asyncio
+async def test_outbox_mark_retry(db_session):
+    """Test marking outbox record for retry."""
+    repo = SQLAlchemyOutboxRepository(db_session)
+
+    outbox = Outbox(
+        id=str(uuid.uuid4()),
+        event_type=OutboxEventType.TICKET_CREATED.value,
+        payload={"ticket_id": "test-123"},
+        status=OutboxStatus.PENDING.value,
+    )
+    await repo.create(outbox)
+
+    await repo.mark_retry(outbox, "Temporary error")
+    await db_session.commit()
+
+    assert outbox.status == OutboxStatus.PENDING.value
+    assert outbox.error_message == "Temporary error"
+    assert outbox.retry_count == 1
 
 
 @pytest.mark.asyncio
