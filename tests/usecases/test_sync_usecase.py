@@ -5,6 +5,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
+from src.models.enums import EventStatus
 from src.services.events_provider_client import EventData, PlaceData
 from src.usecases.sync_events import SyncEventsUsecase
 
@@ -32,7 +33,7 @@ async def test_sync_events_initial(
         ),
         event_time=now_iso,
         registration_deadline=None,
-        status="active",
+        status=EventStatus.PUBLISHED,
         number_of_visitors=10,
         changed_at=now_iso,
         created_at=now_iso,
@@ -97,7 +98,7 @@ async def test_sync_events_incremental(
         ),
         event_time=now_iso,
         registration_deadline=None,
-        status="active",
+        status=EventStatus.PUBLISHED,
         number_of_visitors=10,
         changed_at=now_iso,
         created_at=now_iso,

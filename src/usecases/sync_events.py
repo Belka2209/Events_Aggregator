@@ -121,9 +121,6 @@ class SyncEventsUsecase:
                     logger.error("Error processing event %s: %s", event_data.id, e)
                     stats["errors"] += 1
 
-            # The session will be committed by the calling function
-            # await self._event_repo.commit()
-
             logger.info("Total events processed: %d", event_count)
 
             # Сохраняем состояние синхронизации

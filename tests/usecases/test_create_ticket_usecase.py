@@ -4,8 +4,10 @@ from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
+from src.models.enums import EventStatus
 from src.services.events_provider_client import RegistrationData
 from src.usecases.create_ticket import CreateTicketUsecase
+from src.usecases.exceptions import IdempotencyConflict
 
 
 @pytest.mark.asyncio
@@ -23,7 +25,7 @@ async def test_create_ticket_with_idempotency_key_new(
         return_value=RegistrationData(ticket_id="new-ticket-id")
     )
 
-    sample_event.status = "published"
+    sample_event.status = EventStatus.PUBLISHED
 
     outbox_repo = SQLAlchemyOutboxRepository(db_session)
     idempotency_repo = SQLAlchemyIdempotencyRepository(db_session)
@@ -64,7 +66,7 @@ async def test_create_ticket_with_idempotency_key_existing(
         return_value=RegistrationData(ticket_id="new-ticket-id")
     )
 
-    sample_event.status = "published"
+    sample_event.status = EventStatus.PUBLISHED
 
     outbox_repo = SQLAlchemyOutboxRepository(db_session)
     idempotency_repo = SQLAlchemyIdempotencyRepository(db_session)
@@ -109,15 +111,14 @@ async def test_create_ticket_with_idempotency_key_existing(
 async def test_create_ticket_idempotency_key_conflict_different_event(
     db_session, sample_event, ticket_repository, event_repository
 ):
-    """Test idempotency key with different event returns 409."""
-    from fastapi import HTTPException
+    """Test idempotency key with different event raises domain conflict."""
 
     from src.repositories.idempotency_repository import (
         SQLAlchemyIdempotencyRepository,
     )
     from src.repositories.outbox_repository import SQLAlchemyOutboxRepository
 
-    sample_event.status = "published"
+    sample_event.status = EventStatus.PUBLISHED
 
     outbox_repo = SQLAlchemyOutboxRepository(db_session)
     idempotency_repo = SQLAlchemyIdempotencyRepository(db_session)
@@ -137,7 +138,7 @@ async def test_create_ticket_idempotency_key_conflict_different_event(
         client=MagicMock(),
     )
 
-    with pytest.raises(HTTPException) as exc_info:
+    with pytest.raises(IdempotencyConflict):
         await usecase.execute(
             event_id=sample_event.id,
             first_name="John",
@@ -147,22 +148,19 @@ async def test_create_ticket_idempotency_key_conflict_different_event(
             idempotency_key="conflict-key",
         )
 
-    assert exc_info.value.status_code == 409
-
 
 @pytest.mark.asyncio
 async def test_create_ticket_idempotency_key_conflict_different_data(
     db_session, sample_event, ticket_repository, event_repository
 ):
-    """Test idempotency key with different data returns 409."""
-    from fastapi import HTTPException
+    """Test idempotency key with different data raises domain conflict."""
 
     from src.repositories.idempotency_repository import (
         SQLAlchemyIdempotencyRepository,
     )
     from src.repositories.outbox_repository import SQLAlchemyOutboxRepository
 
-    sample_event.status = "published"
+    sample_event.status = EventStatus.PUBLISHED
 
     outbox_repo = SQLAlchemyOutboxRepository(db_session)
     idempotency_repo = SQLAlchemyIdempotencyRepository(db_session)
@@ -186,7 +184,7 @@ async def test_create_ticket_idempotency_key_conflict_different_data(
         client=MagicMock(),
     )
 
-    with pytest.raises(HTTPException) as exc_info:
+    with pytest.raises(IdempotencyConflict):
         await usecase.execute(
             event_id=sample_event.id,
             first_name="John",
@@ -195,8 +193,6 @@ async def test_create_ticket_idempotency_key_conflict_different_data(
             seat="A2",
             idempotency_key="conflict-key",
         )
-
-    assert exc_info.value.status_code == 409
 
 
 @pytest.mark.asyncio
@@ -214,7 +210,7 @@ async def test_create_ticket_creates_outbox_record(
         return_value=RegistrationData(ticket_id="ticket-outbox-test")
     )
 
-    sample_event.status = "published"
+    sample_event.status = EventStatus.PUBLISHED
 
     outbox_repo = SQLAlchemyOutboxRepository(db_session)
     idempotency_repo = SQLAlchemyIdempotencyRepository(db_session)

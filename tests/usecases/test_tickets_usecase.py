@@ -4,8 +4,8 @@ from datetime import datetime, timezone
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
-from fastapi import HTTPException
 
+from src.models.enums import EventStatus
 from src.models.event import Event
 from src.models.ticket import Ticket
 from src.services.events_provider_client import (
@@ -16,6 +16,7 @@ from src.services.events_provider_client import (
 )
 from src.usecases.create_ticket import CreateTicketUsecase
 from src.usecases.delete_ticket import DeleteTicketUsecase
+from src.usecases.exceptions import ProviderUnavailable
 
 
 @pytest.mark.asyncio
@@ -33,7 +34,7 @@ async def test_create_ticket_usecase(
         return_value=RegistrationData(ticket_id="test-ticket-id")
     )
 
-    sample_event.status = "published"
+    sample_event.status = EventStatus.PUBLISHED
 
     outbox_repo = SQLAlchemyOutboxRepository(db_session)
     idempotency_repo = SQLAlchemyIdempotencyRepository(db_session)
@@ -93,7 +94,7 @@ async def test_delete_ticket_usecase(sample_event: Event, ticket_repository):
 async def test_delete_ticket_usecase_provider_unavailable(
     sample_event: Event, ticket_repository
 ):
-    """Test DeleteTicketUsecase returns 503 when provider is unavailable."""
+    """Test DeleteTicketUsecase raises ProviderUnavailable."""
     mock_client = MagicMock()
     mock_client.unregister = AsyncMock(
         side_effect=ProviderError(status_code=503, detail="provider unavailable")
@@ -112,17 +113,15 @@ async def test_delete_ticket_usecase_provider_unavailable(
 
     usecase = DeleteTicketUsecase(ticket_repo=ticket_repository, client=mock_client)
 
-    with pytest.raises(HTTPException) as exc_info:
+    with pytest.raises(ProviderUnavailable):
         await usecase.execute(ticket_id=ticket.ticket_id)
-
-    assert exc_info.value.status_code == 503
 
 
 @pytest.mark.asyncio
 async def test_create_ticket_usecase_provider_unavailable(
     sample_event: Event, ticket_repository, event_repository, db_session
 ):
-    """Test CreateTicketUsecase returns 503 when provider is unavailable."""
+    """Test CreateTicketUsecase raises ProviderUnavailable."""
     from src.repositories.idempotency_repository import SQLAlchemyIdempotencyRepository
     from src.repositories.outbox_repository import SQLAlchemyOutboxRepository
 
@@ -131,7 +130,7 @@ async def test_create_ticket_usecase_provider_unavailable(
         side_effect=ProviderError(status_code=503, detail="provider unavailable")
     )
 
-    sample_event.status = "published"
+    sample_event.status = EventStatus.PUBLISHED
 
     outbox_repo = SQLAlchemyOutboxRepository(db_session)
     idempotency_repo = SQLAlchemyIdempotencyRepository(db_session)
@@ -144,7 +143,7 @@ async def test_create_ticket_usecase_provider_unavailable(
         client=mock_client,
     )
 
-    with pytest.raises(HTTPException) as exc_info:
+    with pytest.raises(ProviderUnavailable):
         await usecase.execute(
             event_id=sample_event.id,
             first_name="John",
@@ -152,8 +151,6 @@ async def test_create_ticket_usecase_provider_unavailable(
             email="john@example.com",
             seat="A1",
         )
-
-    assert exc_info.value.status_code == 503
 
 
 @pytest.mark.asyncio
@@ -173,7 +170,7 @@ async def test_create_ticket_usecase_retries_with_fallback_seat(
     )
     mock_client.get_seats = AsyncMock(return_value=SeatsData(seats=["A2", "A3"]))
 
-    sample_event.status = "published"
+    sample_event.status = EventStatus.PUBLISHED
 
     outbox_repo = SQLAlchemyOutboxRepository(db_session)
     idempotency_repo = SQLAlchemyIdempotencyRepository(db_session)

@@ -4,8 +4,7 @@ import logging
 from datetime import datetime, timezone
 from typing import Any
 
-from fastapi import HTTPException
-
+from src.models.enums import EventStatus
 from src.models.outbox import Outbox, OutboxEventType
 from src.models.ticket import Ticket
 from src.repositories.event_repository import EventRepository
@@ -15,6 +14,16 @@ from src.repositories.ticket_repository import TicketRepository
 from src.services.events_provider_client import (
     EventsProviderClient,
     ProviderError,
+)
+from src.usecases.exceptions import (
+    EventNotFound,
+    EventNotPublished,
+    IdempotencyConflict,
+    ProviderEventNotFound,
+    ProviderOperationFailed,
+    ProviderUnavailable,
+    RegistrationDeadlinePassed,
+    SeatNotAvailable,
 )
 
 logger = logging.getLogger(__name__)
@@ -61,23 +70,21 @@ class CreateTicketUsecase:
             Dictionary with ticket_id and event details.
 
         Raises:
-            HTTPException: If validation fails or provider returns an error.
+            UsecaseError: If validation fails or provider returns an error.
         """
         if idempotency_key:
             existing = await self._idempotency_repo.get(idempotency_key)
             if existing:
                 if existing.event_id != event_id:
-                    raise HTTPException(
-                        status_code=409,
-                        detail="Idempotency key already used with different event",
+                    raise IdempotencyConflict(
+                        "Idempotency key already used with different event",
                     )
                 if (
                     existing.request_data.get("seat") != seat
                     or existing.request_data.get("email") != email
                 ):
-                    raise HTTPException(
-                        status_code=409,
-                        detail="Idempotency key already used with different data",
+                    raise IdempotencyConflict(
+                        "Idempotency key already used with different data",
                     )
                 logger.info(
                     "Returning existing ticket for idempotency key: %s",
@@ -90,21 +97,16 @@ class CreateTicketUsecase:
 
         event = await self._event_repo.get(event_id)
         if not event:
-            raise HTTPException(status_code=404, detail="Event not found")
+            raise EventNotFound
 
-        if event.status != "published":
-            raise HTTPException(
-                status_code=400,
-                detail=f"Event is not published (current status: {event.status})",
-            )
+        if event.status != EventStatus.PUBLISHED:
+            raise EventNotPublished(event.status)
 
         if (
             event.registration_deadline
             and datetime.now(timezone.utc) > event.registration_deadline
         ):
-            raise HTTPException(
-                status_code=400, detail="Registration deadline has passed"
-            )
+            raise RegistrationDeadlinePassed
 
         registration = None
         booked_seat = seat
@@ -131,10 +133,7 @@ class CreateTicketUsecase:
                     try:
                         seats_data = await self._client.get_seats(event_id)
                     except ProviderError:
-                        raise HTTPException(
-                            status_code=400,
-                            detail="Seat is not available",
-                        ) from e
+                        raise SeatNotAvailable from e
 
                     fallback_seat = next(
                         (
@@ -154,24 +153,16 @@ class CreateTicketUsecase:
                         candidate_seats.append(fallback_seat)
                         continue
 
-                    raise HTTPException(
-                        status_code=400,
-                        detail="Seat is not available",
-                    ) from e
+                    raise SeatNotAvailable from e
                 if e.status_code == 404:
-                    raise HTTPException(
-                        status_code=404, detail="Event not found in provider"
-                    ) from e
+                    raise ProviderEventNotFound from e
                 if e.status_code == 503:
-                    raise HTTPException(
-                        status_code=503,
-                        detail="Events Provider is unavailable",
-                    ) from e
+                    raise ProviderUnavailable from e
                 logger.error("Provider error during registration: %s", e.detail)
-                raise HTTPException(status_code=500, detail="Provider error") from e
+                raise ProviderOperationFailed from e
 
         if registration is None:
-            raise HTTPException(status_code=400, detail="Seat is not available")
+            raise SeatNotAvailable
 
         ticket = Ticket(
             ticket_id=registration.ticket_id,

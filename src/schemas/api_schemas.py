@@ -4,6 +4,8 @@ from datetime import datetime
 
 from pydantic import BaseModel, Field
 
+from src.models.enums import EventStatus
+
 
 # Place schemas
 class PlaceResponse(BaseModel):
@@ -34,7 +36,7 @@ class EventResponse(BaseModel):
     place: PlaceResponse
     event_time: datetime
     registration_deadline: datetime | None
-    status: str
+    status: EventStatus
     number_of_visitors: int
 
 
@@ -46,7 +48,7 @@ class EventDetailResponse(BaseModel):
     place: PlaceDetailResponse
     event_time: datetime
     registration_deadline: datetime | None
-    status: str
+    status: EventStatus
     number_of_visitors: int
 
 

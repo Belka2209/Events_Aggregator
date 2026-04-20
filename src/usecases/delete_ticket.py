@@ -2,12 +2,16 @@
 
 import logging
 
-from fastapi import HTTPException
-
 from src.repositories.ticket_repository import TicketRepository
 from src.services.events_provider_client import (
     EventsProviderClient,
     ProviderError,
+)
+from src.usecases.exceptions import (
+    ProviderOperationFailed,
+    ProviderTicketNotFound,
+    ProviderUnavailable,
+    TicketNotFound,
 )
 
 logger = logging.getLogger(__name__)
@@ -32,12 +36,12 @@ class DeleteTicketUsecase:
             ticket_id: Ticket UUID.
 
         Raises:
-            HTTPException: If ticket is not found or provider fails.
+            UsecaseError: If ticket is not found or provider fails.
         """
         # Get ticket from local DB
         ticket = await self._ticket_repo.get_by_ticket_id(ticket_id)
         if not ticket:
-            raise HTTPException(status_code=404, detail="Ticket not found")
+            raise TicketNotFound
 
         # Unregister from Events Provider API
         try:
@@ -49,21 +53,12 @@ class DeleteTicketUsecase:
                 e.detail,
             )
             if e.status_code == 404:
-                raise HTTPException(
-                    status_code=404,
-                    detail="Ticket not found in provider",
-                )
+                raise ProviderTicketNotFound from e
             if e.status_code == 503:
-                raise HTTPException(
-                    status_code=503,
-                    detail="Events Provider is unavailable",
-                )
-            raise HTTPException(
-                status_code=500, detail="Failed to unregister from provider"
-            )
+                raise ProviderUnavailable from e
+            raise ProviderOperationFailed from e
 
         # Delete ticket from local DB
         await self._ticket_repo.delete(ticket)
-        # await self._ticket_repo.commit()
 
         logger.info("Ticket deleted: %s", ticket_id)

@@ -5,9 +5,11 @@ from datetime import datetime
 from typing import TYPE_CHECKING
 
 from sqlalchemy import DateTime, ForeignKey, Integer, String
+from sqlalchemy import Enum as SQLEnum
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from src.core.database import Base
+from src.models.enums import EventStatus
 
 if TYPE_CHECKING:
     from src.models.ticket import Ticket
@@ -51,7 +53,11 @@ class Event(Base):
     registration_deadline: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True
     )
-    status: Mapped[str] = mapped_column(String(50), nullable=False, default="new")
+    status: Mapped[EventStatus] = mapped_column(
+        SQLEnum(EventStatus, native_enum=False, length=50),
+        nullable=False,
+        default=EventStatus.NEW,
+    )
     number_of_visitors: Mapped[int] = mapped_column(Integer, default=0)
     changed_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=True)

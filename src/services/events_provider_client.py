@@ -2,12 +2,30 @@
 
 import logging
 from dataclasses import dataclass
+from urllib.parse import urljoin
 
 import httpx
 
 from src.core.settings import settings
+from src.models.enums import EventStatus
 
 logger = logging.getLogger(__name__)
+
+
+def _build_provider_url(base_url: str, path: str) -> str:
+    """Build provider API URL using urljoin."""
+    return urljoin(f"{base_url.rstrip('/')}/", path.lstrip("/"))
+
+
+def _extract_error_detail(response: httpx.Response) -> str:
+    """Extract human-readable error details from provider response."""
+    try:
+        data = response.json()
+        if isinstance(data, dict):
+            return str(data.get("detail", data))
+        return str(data)
+    except Exception:
+        return response.text or "Unknown provider error"
 
 
 class ProviderError(Exception):
@@ -41,7 +59,7 @@ class EventData:
     place: PlaceData
     event_time: str
     registration_deadline: str | None
-    status: str
+    status: EventStatus
     number_of_visitors: int
     changed_at: str
     created_at: str
@@ -87,23 +105,12 @@ class EventsProviderClient:
         """Get request headers."""
         return {"x-api-key": self._api_key, "Content-Type": "application/json"}
 
-    @staticmethod
-    def _extract_error_detail(response: httpx.Response) -> str:
-        """Extract human-readable error details from provider response."""
-        try:
-            data = response.json()
-            if isinstance(data, dict):
-                return str(data.get("detail", data))
-            return str(data)
-        except Exception:
-            return response.text or "Unknown provider error"
-
     def _raise_provider_error(self, response: httpx.Response) -> None:
         """Raise ProviderError for non-success responses."""
         if response.is_error:
             raise ProviderError(
                 status_code=response.status_code,
-                detail=self._extract_error_detail(response),
+                detail=_extract_error_detail(response),
             )
 
     async def events(
@@ -118,7 +125,7 @@ class EventsProviderClient:
         Returns:
             Tuple of (list of events, next cursor or None).
         """
-        url = f"{self._base_url}/api/events/"
+        url = _build_provider_url(self._base_url, "/api/events/")
         params = {"changed_at": changed_at}
         if cursor:
             params["cursor"] = cursor
@@ -158,7 +165,7 @@ class EventsProviderClient:
                 place=place,
                 event_time=event_data["event_time"],
                 registration_deadline=event_data.get("registration_deadline"),
-                status=event_data["status"],
+                status=EventStatus(event_data["status"]),
                 number_of_visitors=event_data.get("number_of_visitors", 0),
                 changed_at=event_data["changed_at"],
                 created_at=event_data["created_at"],
@@ -177,7 +184,7 @@ class EventsProviderClient:
         Returns:
             SeatsData with list of available seats.
         """
-        url = f"{self._base_url}/api/events/{event_id}/seats/"
+        url = _build_provider_url(self._base_url, f"/api/events/{event_id}/seats/")
 
         try:
             async with httpx.AsyncClient(timeout=self._timeout) as client:
@@ -210,7 +217,7 @@ class EventsProviderClient:
         Returns:
             RegistrationData with ticket_id.
         """
-        url = f"{self._base_url}/api/events/{event_id}/register/"
+        url = _build_provider_url(self._base_url, f"/api/events/{event_id}/register/")
         payload = {
             "first_name": first_name,
             "last_name": last_name,
@@ -243,7 +250,7 @@ class EventsProviderClient:
         Returns:
             UnregisterData with success status.
         """
-        url = f"{self._base_url}/api/events/{event_id}/unregister/"
+        url = _build_provider_url(self._base_url, f"/api/events/{event_id}/unregister/")
         payload = {"ticket_id": ticket_id}
 
         try:
