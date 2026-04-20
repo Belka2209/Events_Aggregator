@@ -49,6 +49,8 @@ class Settings(BaseSettings):
     # Outbox worker settings
     outbox_poll_interval_seconds: int = 5
     outbox_max_retries: int = 3
+    outbox_send_retries_per_cycle: int = 3
+    outbox_send_retry_delay_seconds: float = 1.0
 
     # Idempotency key settings
     idempotency_key_ttl_days: int = 7

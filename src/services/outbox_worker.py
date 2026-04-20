@@ -24,6 +24,8 @@ class OutboxWorker:
         self._capashino = CapashinoClient()
         self._poll_interval = settings.outbox_poll_interval_seconds
         self._max_retries = settings.outbox_max_retries
+        self._send_retries_per_cycle = settings.outbox_send_retries_per_cycle
+        self._send_retry_delay_seconds = settings.outbox_send_retry_delay_seconds
 
     @staticmethod
     def _safe_retry_count(value: object) -> int:
@@ -149,11 +151,30 @@ class OutboxWorker:
         reference_id = payload.get("ticket_id")
         idempotency_key = payload.get("idempotency_key", f"outbox-{record.id}")
 
-        await self._capashino.create_notification(
-            message=message,
-            reference_id=reference_id,
-            idempotency_key=idempotency_key,
-        )
+        # Capashino may return transient 5xx responses. Retry quickly in-process
+        # before deferring to the next worker poll cycle.
+        attempts = 0
+        while True:
+            attempts += 1
+            try:
+                await self._capashino.create_notification(
+                    message=message,
+                    reference_id=reference_id,
+                    idempotency_key=idempotency_key,
+                )
+                break
+            except CapashinoError as exc:
+                retryable = exc.status_code is None or exc.status_code >= 500
+                if not retryable or attempts >= self._send_retries_per_cycle:
+                    raise
+                logger.warning(
+                    "Transient Capashino error for ticket %s, retrying in %.1fs (%s/%s)",
+                    reference_id,
+                    self._send_retry_delay_seconds,
+                    attempts,
+                    self._send_retries_per_cycle,
+                )
+                await asyncio.sleep(self._send_retry_delay_seconds)
 
         await repo.mark_sent(record)
         await session.commit()
