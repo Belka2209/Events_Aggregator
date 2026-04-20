@@ -7,4 +7,5 @@ class EventStatus(str, Enum):
     """Event lifecycle status."""
 
     NEW = "new"
+    ACTIVE = "active"
     PUBLISHED = "published"
