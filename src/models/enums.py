@@ -9,3 +9,5 @@ class EventStatus(str, Enum):
     NEW = "new"
     ACTIVE = "active"
     PUBLISHED = "published"
+    REGISTRATION_CLOSED = "registration_closed"
+    FINISHED = "finished"

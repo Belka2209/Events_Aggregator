@@ -54,7 +54,12 @@ class Event(Base):
         DateTime(timezone=True), nullable=True
     )
     status: Mapped[EventStatus] = mapped_column(
-        SQLEnum(EventStatus, native_enum=False, length=50),
+        SQLEnum(
+            EventStatus,
+            native_enum=False,
+            length=50,
+            values_callable=lambda enum_cls: [item.value for item in enum_cls],
+        ),
         nullable=False,
         default=EventStatus.NEW,
     )
